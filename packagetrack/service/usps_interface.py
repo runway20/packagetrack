@@ -29,6 +29,10 @@ class USPSInterface(BaseInterface):
             num[0:2].isalpha() and
             num[2:9].isdigit() and
             num[11:13].isalpha()
+        ) or (
+            len(num) == 22 and
+            num.isdigit() and
+            num[0:2] == '96'
         )
 
 
