@@ -32,7 +32,8 @@ class USPSInterface(BaseInterface):
         ) or (
             len(num) == 22 and
             num.isdigit() and
-            num[0:2] == '96'
+            num.startswith('9') and
+            !num.startswith('96')
         )
 
 

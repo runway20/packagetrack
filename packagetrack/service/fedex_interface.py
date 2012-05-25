@@ -14,7 +14,8 @@ class FedexInterface(BaseInterface):
         self.cfg = None
 
     def identify(self, num):
-        return num.isdigit() and (len(num) in (12, 15, 20, 22))
+        return (num.isdigit() and (len(num) in (12, 15, 20))) or \
+            (len(num) == 22 and num.startswith('96'))
 
     def track(self, tracking_number):
         if not self.validate(tracking_number):
