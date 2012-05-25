@@ -62,9 +62,13 @@ class USPSInterface(BaseInterface):
             raise TrackFailed(error)
 
         # make sure the events list is a list
-        events = rsp['TrackResponse']['TrackInfo']['TrackDetail']
-        if type(events) != list:
-            events = [events]
+        try:
+            events = rsp['TrackResponse']['TrackInfo']['TrackDetail']
+        except KeyError:
+            events = []
+        else:
+            if type(events) != list:
+                events = [events]
 
         summary = rsp['TrackResponse']['TrackInfo']['TrackSummary']
         last_update = self._getTrackingDate(summary)
