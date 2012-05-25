@@ -1,5 +1,5 @@
 import urllib
-from datetime import datetime
+from datetime import datetime, time
 
 import packagetrack
 from ..data import TrackingInfo
@@ -33,7 +33,7 @@ class USPSInterface(BaseInterface):
             len(num) == 22 and
             num.isdigit() and
             num.startswith('9') and
-            !num.startswith('96')
+            not num.startswith('96')
         )
 
 
@@ -148,10 +148,12 @@ class USPSInterface(BaseInterface):
     def _getTrackingDate(self, node):
         """Returns a datetime object for the given node's
         <EventTime> and <EventDate> elements"""
-
-        return datetime.combine(
-                    datetime.strptime(node['EventDate'], '%B %d, %Y').date(),
-                    datetime.strptime(node['EventTime'], '%I:%M %p').time())
+        date = datetime.strptime(node['EventDate'], '%B %d, %Y').date()
+        if node['EventTime']:
+            time_ = datetime.strptime(node['EventTime'], '%I:%M %p').time()
+        else:
+            time_ = time(0,0,0)
+        return datetime.combine(date, time_)
 
 
     def _getTrackingLocation(self, node):
