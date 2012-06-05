@@ -154,20 +154,12 @@ class FedexInterface(BaseInterface):
     def validate(self, tnum):
         """Validate the tracking number"""
 
-        if len(tnum) == 12:
-            return self._validate_express(tnum)
-
-        elif (len(tnum) == 15):
-            return self._validate_ground96(tnum)
-
-        elif (len(tnum) == 22) and tnum.startswith('96'):
-            return self._validate_ground96(tnum)
-
-        elif (len(tnum) == 20) and tnum.startswith('00'):
-            return self._validate_ssc18(tnum)
-
-        return False
-
+        return {
+            12: self._validate_express,
+            15: self._validate_ground96,
+            20: lambda x: x.startswith('96') and self._validate_ground96(x),
+            22: lambda x: x.startswith('00') and self._validate_ssc18(x),
+        }.get(len(tnum), lambda x: False)(tnum)
 
     def _validate_ground96(self, tracking_number):
         """Validates ground code 128 ("96") bar codes
