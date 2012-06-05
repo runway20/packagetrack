@@ -24,18 +24,14 @@ class USPSInterface(BaseInterface):
     }
 
     def identify(self, num):
-        return (
-            len(num) == 13 and
-            num[0:2].isalpha() and
-            num[2:9].isdigit() and
-            num[11:13].isalpha()
-        ) or (
-            len(num) == 22 and
-            num.isdigit() and
-            num.startswith('9') and
-            not num.startswith('96')
-        )
-
+        return {
+            13: lambda x: \
+                x[0:2].isalpha() and x[2:9].isdigit() and x[11:13].isalpha(),
+            20: lambda x: \
+                x.isdigit() and x.startswith('0'),
+            22: lambda x: \
+                x.isdigit() and x.startswith('9') and not x.startswith('96'),
+        }.get(len(num), lambda x: False)(num)
 
     def track(self, tracking_number):
         resp = self._send_request(tracking_number)
