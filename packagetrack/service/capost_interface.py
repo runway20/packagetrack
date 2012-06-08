@@ -32,7 +32,8 @@ class CanadaPostInterface(BaseInterface):
         """Check if a tracking number is valid for this service
         """
         return {
-            15: lambda tn: tn.isdigit() and tn.startswith('9'),
+            11: lambda tn: tn[:2].isalpha() and tn.endswith('CA'),
+            13: lambda tn: tn[:2].isalpha() and tn.endswith('CA'),
             16: lambda tn: tn.isdigit(),
         }.get(len(tracking_number), lambda tn: False)(tracking_number)
     validate = identify
