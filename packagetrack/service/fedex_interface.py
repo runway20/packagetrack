@@ -13,10 +13,6 @@ class FedexInterface(BaseInterface):
     def __init__(self):
         self.cfg = None
 
-    def identify(self, num):
-        return (num.isdigit() and (len(num) in (12, 15, 20))) or \
-            (len(num) == 22 and num.startswith('96'))
-
     def track(self, tracking_number):
         if not self.validate(tracking_number):
             raise InvalidTrackingNumber()
@@ -163,6 +159,8 @@ class FedexInterface(BaseInterface):
             20: lambda x: x.startswith('96') and self._validate_ground96(x),
             22: lambda x: x.startswith('00') and self._validate_ssc18(x),
         }.get(len(tnum), lambda x: False)(tnum)
+
+    identify = validate
 
     def _validate_ground96(self, tracking_number):
         """Validates ground code 128 ("96") bar codes
