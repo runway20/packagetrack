@@ -42,9 +42,9 @@ class CanadaPostInterface(BaseInterface):
 
     def _parse_response(self, summary_response, detail_response):
         if 'messages' in get_keys(summary_response):
-            raise TrackFailed(', '.join(m['description'] for m in summary['messages']))
+            raise TrackFailed(summary_response['messages'])
         elif 'messages' in get_keys(detail_response):
-            raise TrackFailed(', '.join(m['description'] for m in detail['messages']))
+            raise TrackFailed(detail_response['messages'])
         if 'pin-summary' in get_keys(summary_response['tracking-summary']):
             summary = summary_response['tracking-summary']['pin-summary'][0]
         else:
