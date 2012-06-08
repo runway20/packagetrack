@@ -50,8 +50,9 @@ class CanadaPostInterface(BaseInterface):
         else:
             summary = summary_response['tracking-summary']['dnc-summary'][0]
         details = detail_response['tracking-detail']
-        delivery_date = datetime.date(*map(int,
-            details['expected-delivery-date'].split('-')))
+        delivery_date = datetime.datetime.strptime(
+            details['expected-delivery-date'],
+            '%Y-%m-%d')
         service = details['service-name']
         info = TrackingInfo(
             tracking_number=None,
