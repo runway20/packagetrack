@@ -25,7 +25,7 @@ Basic usage:
 Configuration:
 
 To enable package tracking, you will need to obtain an API account for
-each of the services you wish to use, and then make a config file 
+each of the services you wish to use, and then make a config file
 that looks like:
 
     [UPS]
@@ -53,6 +53,7 @@ from ConfigParser import ConfigParser
 from .service.fedex_interface import FedexInterface
 from .service.ups_interface   import UPSInterface
 from .service.usps_interface  import USPSInterface
+from .service.capost_interface import CanadaPostInterface
 
 __authors__     = 'Scott Torborg, Michael Stella'
 __credits__     = ['Scott Torborg','Michael Stella']
@@ -81,6 +82,7 @@ def get_interface(shipper):
 register_interface('UPS', UPSInterface())
 register_interface('FedEx', FedexInterface())
 register_interface('USPS', USPSInterface())
+register_interface('CanadaPost', CanadaPostInterface())
 
 
 class UnsupportedShipper(Exception):
