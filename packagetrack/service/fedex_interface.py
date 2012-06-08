@@ -65,11 +65,14 @@ class FedexInterface(BaseInterface):
                 delivery_detail = None
 
             last_update = delivery_date
-            location = ','.join((
-                                rsp.ActualDeliveryAddress.City,
-                                rsp.ActualDeliveryAddress.StateOrProvinceCode,
-                                rsp.ActualDeliveryAddress.CountryCode,
-                            ))
+            try:
+                location = ','.join((
+                                    rsp.ActualDeliveryAddress.City,
+                                    rsp.ActualDeliveryAddress.StateOrProvinceCode,
+                                    rsp.ActualDeliveryAddress.CountryCode,
+                                ))
+            except AttributeError:
+                location = 'N/A'
 
         else:
             delivery_detail = None

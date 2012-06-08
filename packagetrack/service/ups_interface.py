@@ -84,7 +84,11 @@ class UPSInterface(BaseInterface):
         # Check status code?
 
         # we need the service code, some things are treated differently
-        service_code = root['Shipment']['Service']['Code']
+        try:
+            service_code = root['Shipment']['Service']['Code']
+        except KeyError as e:
+            print root
+            raise e
         service_description = 'UPS %s' % root['Shipment']['Service']['Description']
 
         package = root['Shipment']['Package']
