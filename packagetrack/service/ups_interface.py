@@ -86,9 +86,8 @@ class UPSInterface(BaseInterface):
         # we need the service code, some things are treated differently
         try:
             service_code = root['Shipment']['Service']['Code']
-        except KeyError as e:
-            print root
-            raise e
+        except KeyError:
+            raise TrackFailed(root['Response']['ErrorDescription']
         service_description = 'UPS %s' % root['Shipment']['Service']['Description']
 
         package = root['Shipment']['Package']
