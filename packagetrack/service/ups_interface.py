@@ -87,7 +87,7 @@ class UPSInterface(BaseInterface):
         try:
             service_code = root['Shipment']['Service']['Code']
         except KeyError:
-            raise TrackFailed(root['Response']['ErrorDescription'])
+            raise TrackFailed(root)
         service_description = 'UPS %s' % root['Shipment']['Service']['Description']
 
         package = root['Shipment']['Package']
@@ -115,35 +115,31 @@ class UPSInterface(BaseInterface):
         # note this also has no SDD, so we just use the last update
         if service_code == '031':
             loc = root['Shipment']['ShipTo']['Address']
-            last_location = ','.join((loc['City'],
-                                      loc['StateProvinceCode'],
-                                      loc['CountryCode']))
-            delivery_date = last_update
-
         else:
-            if status_code == 'M':
-                last_location = None
+            loc = activity['ActivityLocation']['Address']
+        if status_code == 'M':
+            last_location = 'N/A'
+        else:
+            last_location = []
+            for key in ['City', 'StateProvinceCode', 'CountryCode']:
+                try:
+                    last_location.append(loc[key])
+                except KeyError:
+                    continue
+            last_location = ','.join(last_location) if last_location else 'UNKNOWN'
 
-            else:
-                # the last known location is interesting
-                loc = activity['ActivityLocation']['Address']
-                last_location = ','.join((loc['City'],
-                                          loc['StateProvinceCode'],
-                                          loc['CountryCode']))
-
-            # Delivery date is the last_update if delivered, otherwise
-            # the estimated delivery date
-            if status_code == 'D':
-                delivery_date = last_update
-
-            elif 'RescheduledDeliveryDate' in package:
-                delivery_date = datetime.strptime(
-                    package['RescheduledDeliveryDate'], "%Y%m%d")
-            elif 'ScheduledDeliveryDate' in root['Shipment']:
-                delivery_date = datetime.strptime(
-                    root['Shipment']['ScheduledDeliveryDate'], "%Y%m%d")
-            else:
-                delivery_date = None
+        # Delivery date is the last_update if delivered, otherwise
+        # the estimated delivery date
+        if service_code == '031' or status_code == 'D':
+            delivery_date = last_update
+        elif 'RescheduledDeliveryDate' in package:
+            delivery_date = datetime.strptime(
+                package['RescheduledDeliveryDate'], "%Y%m%d")
+        elif 'ScheduledDeliveryDate' in root['Shipment']:
+            delivery_date = datetime.strptime(
+                root['Shipment']['ScheduledDeliveryDate'], "%Y%m%d")
+        else:
+            delivery_date = None
 
 
         # Delivery detail may not always be available either
@@ -166,11 +162,13 @@ class UPSInterface(BaseInterface):
 
         for e in package['Activity']:
             loc = e['ActivityLocation']['Address']
-            location=None
-            if 'City' in loc:
-                location = ','.join((loc['City'],
-                                     loc['StateProvinceCode'],
-                                     loc['CountryCode']))
+            location = []
+            for key in ['City', 'StateProvinceCode', 'CountryCode']:
+                try:
+                    location.append(loc[key])
+                except KeyError:
+                    continue
+            location = ','.join(location) if location else 'UNKNOWN'
 
             edate = datetime.strptime(e['Date'], "%Y%m%d").date()
             etime = datetime.strptime(e['Time'], "%H%M%S").time()
@@ -180,7 +178,6 @@ class UPSInterface(BaseInterface):
                 detail = e['Status']['StatusType']['Description'],
                 date = timestamp,
             )
-
 
         return trackinfo
 
