@@ -54,6 +54,7 @@ from .service.fedex_interface import FedexInterface
 from .service.ups_interface   import UPSInterface
 from .service.usps_interface  import USPSInterface
 from .service.capost_interface import CanadaPostInterface
+from .service.dhl_interface import DHLInterface
 
 __authors__     = 'Scott Torborg, Michael Stella'
 __credits__     = ['Scott Torborg','Michael Stella']
@@ -83,11 +84,11 @@ register_interface('UPS', UPSInterface())
 register_interface('FedEx', FedexInterface())
 register_interface('USPS', USPSInterface())
 register_interface('CanadaPost', CanadaPostInterface())
+register_interface('DHL', DHLInterface())
 
 
 class UnsupportedShipper(Exception):
     pass
-
 
 class Package(object):
     """A package to be tracked."""
