@@ -32,7 +32,8 @@ class CanadaPostInterface(BaseInterface):
         """Check if a tracking number is valid for this service
         """
         return {
-            15: lambda tn: tn.isdigit(),
+            11: lambda tn: tn[:2].isalpha() and tn.endswith('CA'),
+            13: lambda tn: tn[:2].isalpha() and tn.endswith('CA'),
             16: lambda tn: tn.isdigit(),
         }.get(len(tracking_number), lambda tn: False)(tracking_number)
     validate = identify
@@ -42,16 +43,14 @@ class CanadaPostInterface(BaseInterface):
 
     def _parse_response(self, summary_response, detail_response):
         if 'messages' in get_keys(summary_response):
-            raise TrackFailed(', '.join(m['description'] for m in summary['messages']))
+            raise TrackFailed(summary_response['messages'])
         elif 'messages' in get_keys(detail_response):
-            raise TrackFailed(', '.join(m['description'] for m in detail['messages']))
-        if 'pin-summary' in get_keys(summary_response['tracking-summary']):
-            summary = summary_response['tracking-summary']['pin-summary'][0]
-        else:
-            summary = summary_response['tracking-summary']['dnc-summary'][0]
+            raise TrackFailed(detail_response['messages'])
+        summary = summary_response['tracking-summary']['pin-summary'][0]
         details = detail_response['tracking-detail']
-        delivery_date = datetime.date(*map(int,
-            details['expected-delivery-date'].split('-')))
+        delivery_date = datetime.datetime.strptime(
+            details['expected-delivery-date'],
+            '%Y-%m-%d')
         service = details['service-name']
         info = TrackingInfo(
             tracking_number=None,
@@ -73,14 +72,12 @@ class CanadaPostInterface(BaseInterface):
 
 
     def track(self, tracking_number):
-        if len(tracking_number) == 16:
-            arg = dict(pin=tracking_number)
-        else:
-            arg = dict(dnc=tracking_number)
         client = self._get_client()
         try:
-            summary = client.service.GetTrackingSummary(locale='EN', **arg)
-            detail = client.service.GetTrackingDetail(locale='EN', **arg)
+            summary = client.service.GetTrackingSummary(
+                locale='EN', pin=tracking_number)
+            detail = client.service.GetTrackingDetail(
+                locale='EN', pin=tracking_number)
         except suds.WebFault as e:
             raise TrackFailed(e)
         info = self._parse_response(summary, detail)

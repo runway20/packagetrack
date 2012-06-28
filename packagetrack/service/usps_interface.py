@@ -31,6 +31,8 @@ class USPSInterface(BaseInterface):
                 x.isdigit() and x.startswith('0'),
             22: lambda x: \
                 x.isdigit() and x.startswith('9') and not x.startswith('96'),
+            30: lambda x:
+                x.isdigit(),
         }.get(len(num), lambda x: False)(num)
 
     def track(self, tracking_number):
