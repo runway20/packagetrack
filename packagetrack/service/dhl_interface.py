@@ -48,7 +48,6 @@ class DHLInterface(BaseInterface):
 
     def track(self, tracking_number):
         req = self._format_request(tracking_number)
-        print req
         api_tx = urllib.urlopen(self._request_url, req)
         resp = api_tx.read().strip()
         api_tx.close()
