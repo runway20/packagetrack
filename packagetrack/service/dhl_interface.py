@@ -19,6 +19,7 @@ class DHLInterface(BaseInterface):
     _password = 'testServVal'
     _language_code = 'en'
     _tz = pytz.timezone('America/Detroit')
+    _time_format = '%Y-%m-%dT%H:%M:%S'
     _request_url = 'https://xmlpitest-ea.dhl.com/XMLShippingServlet'
     _request_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <req:KnownTrackingRequest xmlns:req="http://www.dhl.com"
@@ -67,30 +68,37 @@ class DHLInterface(BaseInterface):
         )
         info.events = self._parse_events(resp['AWBInfo']['ShipmentInfo']['ShipmentEvent'])
         latest_event = info.events[0]
-        #delivery date = ship date + 5 days?
+        info.delivery_date = datetime.datetime.strptime(
+            resp['AWBInfo']['ShipmentInfo']['ShipmentDate'], self._time_format) + \
+            datetime.timedelta(days=5)
         info.status = latest_event.detail
-        last_update = latest_event.date
-        # tracking_info = TrackingInfo(
-        #     tracking_number=awb_number,
-        #     last_update,
-        #     delivery_date,
-        #     status,
-        #     location,
-        #     delivery_detail,
-        #     service
-        # )
+        info.last_update = latest_event.date
+        info.location = latest_event.location
 
-        # return tracking_info
+        return info
 
     def _parse_events(self, events):
+        return sorted(
+            (TrackingEvent(
+                date=datetime.datetime.strptime(
+                    '{Date}T{Time}'.format(**event),
+                    self._time_format),
+                location=event['ServiceArea']['Description'].replace(' - ', ','),
+                detail=event['ServiceEvent']['Description']) \
+                for event in events),
+            key=lambda e: e.date)
         event_list = []
         if type(events) == dict:
             events = [events]
         for event in events:
-            date = datetime.date()
-            time = datetime.time()
-            ts = datetime.com
-            tracking_event = TrackingEvent()
+            ts = datetime.datetime.strptime(
+                '{Date}T{Time}'.format(**event),
+                self._time_format)
+            tracking_event = TrackingEvent(
+                date=ts,
+                location=event['ServiceArea']['Description'].replace(' - ', ','),
+                detail=event['ServiceEvent']['Description'])
+
 
     def _format_request(self, awb_number, language_code='en'):
         message_time = datetime.datetime.now(self._tz).replace(microsecond=0).isoformat()
