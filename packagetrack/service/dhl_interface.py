@@ -82,8 +82,11 @@ class DHLInterface(BaseInterface):
                 date=datetime.datetime.strptime(
                     '{Date}T{Time}'.format(**event),
                     self._time_format),
-                location=event['ServiceArea']['Description'].replace(' - ', ','),
-                detail=event['ServiceEvent']['Description']) \
+                location=','.join(s.strip() \
+                    for s in event['ServiceArea']['Description'].split('-') if s.strip()),
+                detail=' '.join(s.strip() for s in event['ServiceEvent']['Description'].split('\n')).replace(
+                    event['ServiceArea']['Description'], '').strip().replace(
+                    ' in', '').replace(' at', '')) \
                 for event in events),
             key=lambda e: e.date,
             reverse=True)
