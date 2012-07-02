@@ -85,19 +85,8 @@ class DHLInterface(BaseInterface):
                 location=event['ServiceArea']['Description'].replace(' - ', ','),
                 detail=event['ServiceEvent']['Description']) \
                 for event in events),
-            key=lambda e: e.date)
-        event_list = []
-        if type(events) == dict:
-            events = [events]
-        for event in events:
-            ts = datetime.datetime.strptime(
-                '{Date}T{Time}'.format(**event),
-                self._time_format)
-            tracking_event = TrackingEvent(
-                date=ts,
-                location=event['ServiceArea']['Description'].replace(' - ', ','),
-                detail=event['ServiceEvent']['Description'])
-
+            key=lambda e: e.date,
+            reverse=True)
 
     def _format_request(self, awb_number, language_code='en'):
         message_time = datetime.datetime.now(self._tz).replace(microsecond=0).isoformat()
