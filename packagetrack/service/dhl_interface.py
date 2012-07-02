@@ -57,18 +57,27 @@ class DHLInterface(BaseInterface):
         return self._url_template.format(tn=tracking_number)
 
     def _parse_response(self, raw_api_response):
-        resp = xml_to_dict(raw_api_response)['req:TrackingResponse']
-        tracking_number = resp['AWBInfo']['AWBNumber']
+        try:
+            resp = xml_to_dict(raw_api_response)['req:TrackingResponse']['AWBInfo']
+        except err:
+            raise TrackFailed(err)
+        if resp['Status']['ActionStatus'] != u'success':
+            try:
+                msg = resp['Status']['Condition']['ConditionData']
+            except KeyError:
+                msg = resp['Status']['ActionStatus']
+            raise TrackFailed(msg)
         info = TrackingInfo(
-            tracking_number=tracking_number,
+            tracking_number=resp['AWBNumber'],
             delivery_date=None,
             status=None,
-            last_update=None
+            last_update=None,
+            service=self.SHORT_NAME
         )
-        info.events = self._parse_events(resp['AWBInfo']['ShipmentInfo']['ShipmentEvent'])
+        info.events = self._parse_events(resp['ShipmentInfo']['ShipmentEvent'])
         latest_event = info.events[0]
         info.delivery_date = datetime.datetime.strptime(
-            resp['AWBInfo']['ShipmentInfo']['ShipmentDate'], self._time_format) + \
+            resp['ShipmentInfo']['ShipmentDate'], self._time_format) + \
             datetime.timedelta(days=5)
         info.status = latest_event.detail
         info.last_update = latest_event.date
@@ -88,7 +97,7 @@ class DHLInterface(BaseInterface):
                     event['ServiceArea']['Description'], '').strip().replace(
                     ' in', '').replace(' at', '')) \
                 for event in events),
-            key=lambda e: e.date,
+            key=lambda event: event.date,
             reverse=True)
 
     def _format_request(self, awb_number, language_code='en'):
