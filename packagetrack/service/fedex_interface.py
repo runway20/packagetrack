@@ -157,7 +157,7 @@ class FedexInterface(BaseInterface):
             12: self._validate_express,
             15: self._validate_ground96,
             20: lambda x: x.startswith('96') and self._validate_ground96(x),
-            22: lambda x: x.startswith('00') and self._validate_ssc18(x),
+            22: lambda x: x.startswith('91') or (x.startswith('00') and self._validate_ssc18(x)),
         }.get(len(tnum), lambda x: False)(tnum)
 
     identify = validate

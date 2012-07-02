@@ -30,7 +30,7 @@ class USPSInterface(BaseInterface):
             20: lambda x: \
                 x.isdigit() and x.startswith('0'),
             22: lambda x: \
-                x.isdigit() and x.startswith('9') and not x.startswith('96'),
+                x.isdigit() and x.startswith('9') and not (x.startswith('96') or x.startswith('91')),
             30: lambda x:
                 x.isdigit(),
         }.get(len(num), lambda x: False)(num)
