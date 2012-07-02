@@ -4,7 +4,7 @@ import urllib
 import hashlib
 import packagetrack
 
-from ..data import TrackingInfo
+from ..data import TrackingInfo, TrackingEvent
 from ..xml_dict import xml_to_dict
 from ..service import BaseInterface, TrackFailed, InvalidTrackingNumber
 
@@ -59,8 +59,17 @@ class DHLInterface(BaseInterface):
     def _parse_response(self, raw_api_response):
         resp = xml_to_dict(raw_api_response)['req:TrackingResponse']
         tracking_number = resp['AWBInfo']['AWBNumber']
-
-
+        info = TrackingInfo(
+            tracking_number=tracking_number,
+            delivery_date=None,
+            status=None,
+            last_update=None
+        )
+        info.events = self._parse_events(resp['AWBInfo']['ShipmentInfo']['ShipmentEvent'])
+        latest_event = info.events[0]
+        #delivery date = ship date + 5 days?
+        info.status = latest_event.detail
+        last_update = latest_event.date
         # tracking_info = TrackingInfo(
         #     tracking_number=awb_number,
         #     last_update,
@@ -72,6 +81,16 @@ class DHLInterface(BaseInterface):
         # )
 
         # return tracking_info
+
+    def _parse_events(self, events):
+        event_list = []
+        if type(events) == dict:
+            events = [events]
+        for event in events:
+            date = datetime.date()
+            time = datetime.time()
+            ts = datetime.com
+            tracking_event = TrackingEvent()
 
     def _format_request(self, awb_number, language_code='en'):
         message_time = datetime.datetime.now(self._tz).replace(microsecond=0).isoformat()
