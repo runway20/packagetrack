@@ -28,7 +28,7 @@ class DotFileConfig(ConfigurationProvider):
         self._config = ConfigParser()
         self._config.read([config_file])
 
-    def get_value(self, key):
+    def get_value(self, *keys):
         pass
 
 class DictConfig(ConfigurationProvider):
@@ -37,11 +37,11 @@ class DictConfig(ConfigurationProvider):
     def __init__(self, config_dict):
         self._config = config_dict
 
-    def get_value(self, key):
+    def get_value(self, *keys):
         node = self._config
-        for k in key.split('.'):
+        for key in keys:
             try:
-                node = node.get(k)
+                node = node.get(key)
             except KeyError as err:
                 raise ConfigKeyError(err)
         return node

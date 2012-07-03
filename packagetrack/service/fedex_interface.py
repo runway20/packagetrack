@@ -6,12 +6,18 @@ from fedex.services.track_service import FedexTrackRequest, FedexInvalidTracking
 
 import packagetrack
 from ..data import TrackingInfo
-from ..service import BaseInterface, TrackFailed, InvalidTrackingNumber
+from ..service import CarrierInterface, TrackingApiFailure, UnrecognizedTrackingNumber, InvalidTrackingNumber
 
-class FedexInterface(BaseInterface):
+class FedexInterface(CarrierInterface):
+    SHORT_NAME = 'FedEx'
+    LONG_NAME = SHORT_NAME
+
+    _config_ns = SHORT_NAME
+    _url_template = 'http://www.fedex.com/Tracking?tracknumbers={tn}'
 
     def __init__(self):
-        self.cfg = None
+        super(self, CanadaPostInterface).__init__()
+        self._username = config.get_value(self._config_ns, 'username')
 
     def track(self, tracking_number):
         if not self.validate(tracking_number):
@@ -26,25 +32,33 @@ class FedexInterface(BaseInterface):
         # Fires off the request, sets the 'response' attribute on the object.
         try:
             track.send_request()
-        except FedexInvalidTrackingNumber, e:
-            raise InvalidTrackingNumber(e)
-        except FedexError, e:
-            raise TrackFailed(e)
+        except FedexInvalidTrackingNumber as err:
+            raise UnrecognizedTrackingNumber(err)
+        except FedexError as err:
+            raise TrackingApiFailure(err)
 
         # TODO: I haven't actually seen an unsuccessful query yet
         if track.response.HighestSeverity != "SUCCESS":
-            raise TrackFailed("%d: %s" % (
+            raise TrackingApiFailure("%d: %s" % (
                     track.response.Notifications[0].Code,
                     track.response.Notifications[0].LocalizedMessage
                     ))
 
         return self._parse_response(track.response.TrackDetails[0], tracking_number)
 
+    def identify(self, tracking_number):
+        """Validate the tracking number"""
+
+        return {
+            12: self._validate_express,
+            15: self._validate_ground96,
+            20: lambda x: x.startswith('96') and self._validate_ground96(x),
+            22: lambda x: x.startswith('91') or (x.startswith('00') and \
+                self._validate_ssc18(x)),
+        }.get(len(tracking_number), lambda x: False)(tracking_number)
 
     def url(self, tracking_number):
-        return ('http://www.fedex.com/Tracking?tracknumbers=%s'
-                % tracking_number)
-
+        return self._url_template.format(tn=tracking_number)
 
     def _parse_response(self, rsp, tracking_number):
         """Parse the track response and return a TrackingInfo object"""
@@ -82,20 +96,17 @@ class FedexInterface(BaseInterface):
 
         # a new tracking info object
         trackinfo = TrackingInfo(
-                    tracking_number = tracking_number,
-                    last_update     = last_update,
-                    status          = rsp.StatusDescription,
-                    location        = location,
-                    delivery_date   = delivery_date,
-                    delivery_detail = delivery_detail,
-                    service         = rsp.ServiceType,
-                )
+            tracking_number = tracking_number,
+            delivery_date   = delivery_date,
+            delivery_detail = delivery_detail,
+            service         = rsp.ServiceType,
+        )
 
         # now add the events
         for e in rsp.Events:
-            trackinfo.addEvent(
+            trackinfo.create_event(
                 location = self._getTrackingLocation(e),
-                date     = e.Timestamp,
+                timestamp= e.Timestamp,
                 detail   = e.EventDescription,
             )
 
@@ -148,19 +159,6 @@ class FedexInterface(BaseInterface):
                                             'use_test_server')
 
         return self.cfg
-
-
-    def validate(self, tnum):
-        """Validate the tracking number"""
-
-        return {
-            12: self._validate_express,
-            15: self._validate_ground96,
-            20: lambda x: x.startswith('96') and self._validate_ground96(x),
-            22: lambda x: x.startswith('91') or (x.startswith('00') and self._validate_ssc18(x)),
-        }.get(len(tnum), lambda x: False)(tnum)
-
-    identify = validate
 
     def _validate_ground96(self, tracking_number):
         """Validates ground code 128 ("96") bar codes

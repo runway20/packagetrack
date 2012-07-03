@@ -35,6 +35,12 @@ class UnrecognizedTrackingNumber(TrackingFailure):
     """
     pass
 
+class InvalidTrackingNumber(TrackingFailure):
+    """Raised when a service's track() method is called with a TN not for that
+    service
+    """
+    pass
+
 def register_carrier(carrier):
     if carrier.LONG_NAME in carriers:
         raise Exception('Carrier {name} already registered'.format(

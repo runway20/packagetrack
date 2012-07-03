@@ -1,79 +1,79 @@
-import urllib
+import requests
 from datetime import datetime, date, time
 
-import packagetrack
+from packagetrack import config
+from ..service import CarrierInterface, TrackingFailure
 from ..xml_dict import dict_to_xml, xml_to_dict
 from ..data import TrackingInfo
-from ..service import BaseInterface, TrackFailed, InvalidTrackingNumber
 
-class UPSInterface(BaseInterface):
-    api_url = 'https://wwwcie.ups.com/ups.app/xml/Track'
+class UPSInterface(CarrierInterface):
+    SHORT_NAME = 'UPS'
+    LONG_NAME = SHORT_NAME
+
+    _api_url = 'https://wwwcie.ups.com/ups.app/xml/Track'
+    _access_request_attrs = {'xml:lang': 'en-US'}
+    _config_ns = SHORT_NAME
+    _url_template = 'http://wwwapps.ups.com/WebTracking/processInputRequest?'
+        'TypeOfInquiryNumber=T&InquiryNumber1={tn}'
 
     def __init__(self):
-        self.attrs = {'xml:lang': 'en-US'}
+        super(self, UPSInterface).__init__()
+        self._access_license_number = config.get_value(
+            self._config_ns, 'license_number')
+        self._user_id = config.get_value( self._config_ns, 'user_id')
+        self._password = config.get_value( self._config_ns, 'password')
 
     def identify(self, tracking_number):
-        return tracking_number.startswith('1Z')
+        return tracking_number.startswith('1Z') and \
+            tracking_number[-1].isdigit() and \
+            tracking_number.isalnum() and \
+            self._check_tracking_code(tracking_number[2:])
 
-    def validate(self, tracking_number):
-        "Return True if this is a valid UPS tracking number."
-        tracking_num = tracking_number[2:-1]
-        odd_total = 0
-        even_total = 0
+    def track(self, tracking_number):
+        resp = self._send_request(tracking_number)
+        return self._parse_response(resp, tracking_number)
 
-        for ii, digit in enumerate(tracking_num.upper()):
-            try:
-                value = int(digit)
-            except ValueError:
-                value = int((ord(digit) - 63) % 10)
-            if (ii + 1) % 2:
-                odd_total += value
-            else:
-                even_total += value
+    def url(self, tracking_number):
+        return self._url_template.format(tn=tracking_number)
 
-        total = odd_total + even_total * 2
-        check = ((total - (total % 10) + 10) - total) % 10
-        try:
-            return (check == int(tracking_number[-1:]))
-        except ValueError:
-            return False
+    def _check_tracking_code(self, tracking_code):
+        digits = map(lambda d: int(d) if d.isdigit() else ((ord(d) - 63) % 10),
+            tracking_code[:-1].upper())
+        check_digit = int(tracking_code[-1])
+
+        total = (sum(digits[::2]) * 2) + sum(digits[1::2])
+        return (10 - (total % 10)) == check_digit
 
     def _build_access_request(self):
-        config = packagetrack.config
-        d = {
+        req = {
             'AccessRequest': {
-                'AccessLicenseNumber': config.get('UPS', 'license_number'),
-                'UserId': config.get('UPS', 'user_id'),
-                'Password': config.get('UPS', 'password')
+                'AccessLicenseNumber': self._access_license_number,
+                'UserId': self._user_id,
+                'Password': self._password,
             }
         }
-        return dict_to_xml(d, self.attrs)
+        return dict_to_xml(req, self._access_request_attrs)
 
     def _build_track_request(self, tracking_number):
-        req = {
-            'TransactionReference': {
-                'RequestAction': 'Track',
-            },
-            'RequestOption': '1',
-        }
-        d = {
+        data = {
             'TrackRequest': {
-                'Request': req,
-                'TrackingNumber': tracking_number
+                'Request': {
+                    'TransactionReference': {
+                        'RequestAction': 'Track',
+                    },
+                    'RequestOption': '1',
+                },
+                'TrackingNumber': tracking_number,
             }
         }
-        return dict_to_xml(d)
+        return dict_to_xml(data)
 
     def _build_request(self, tracking_number):
         return (self._build_access_request() +
                 self._build_track_request(tracking_number))
 
     def _send_request(self, tracking_number):
-        body = self._build_request(tracking_number)
-        webf = urllib.urlopen(self.api_url, body)
-        resp = webf.read()
-        webf.close()
-        return resp
+        return requests.post(self._api_url, self._build_request(tracking_number)).text
 
     def _parse_response(self, raw, tracking_number):
         root = xml_to_dict(raw)['TrackResponse']
@@ -87,7 +87,7 @@ class UPSInterface(BaseInterface):
         try:
             service_code = root['Shipment']['Service']['Code']
         except KeyError:
-            raise TrackFailed(root)
+            raise TrackingFailure(root)
         service_description = 'UPS %s' % root['Shipment']['Service']['Description']
 
         package = root['Shipment']['Package']
@@ -150,13 +150,9 @@ class UPSInterface(BaseInterface):
 
         trackinfo = TrackingInfo(
             tracking_number = tracking_number,
-            last_update     = last_update,
             delivery_date   = delivery_date,
-            status          = status,
-            location        = last_location,
-            delivery_detail = delivery_detail,
             service         = service_description,
-            )
+        )
 
         # add a single event, UPS doesn't seem to support multiple?
 
@@ -173,24 +169,10 @@ class UPSInterface(BaseInterface):
             edate = datetime.strptime(e['Date'], "%Y%m%d").date()
             etime = datetime.strptime(e['Time'], "%H%M%S").time()
             timestamp = datetime.combine(edate, etime)
-            trackinfo.addEvent(
+            trackinfo.create_event(
                 location = location,
                 detail = e['Status']['StatusType']['Description'],
-                date = timestamp,
+                timestamp = timestamp,
             )
 
         return trackinfo
-
-    def track(self, tracking_number):
-        "Track a UPS package by number. Returns just a delivery date."
-
-        if not self.validate(tracking_number):
-            raise InvalidTrackingNumber()
-
-        resp = self._send_request(tracking_number)
-        return self._parse_response(resp, tracking_number)
-
-    def url(self, tracking_number):
-        "Return a tracking info detail URL by number."
-        return ('http://wwwapps.ups.com/WebTracking/processInputRequest?'
-                'TypeOfInquiryNumber=T&InquiryNumber1=%s' % tracking_number)

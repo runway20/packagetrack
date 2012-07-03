@@ -21,6 +21,18 @@ class TrackingInfo(dict):
         # return slightly different info if it's delivered
         return self._repr_template.format(i=self)
 
+    @property
+    def location(self):
+        return self.events[-1].location
+
+    @property
+    def last_update(self):
+        return self.events[-1].timestamp
+
+    @property
+    def status(self):
+        return self.events[-1].detail
+
     def create_event(self, timestamp, location, detail, **kwargs):
         event = TrackingEvent(timestamp, location, detail)
         event.update(kwargs)
