@@ -59,7 +59,7 @@ class DHLInterface(BaseInterface):
     def _parse_response(self, raw_api_response):
         try:
             resp = xml_to_dict(raw_api_response)['req:TrackingResponse']['AWBInfo']
-        except err:
+        except KeyError as err:
             raise TrackFailed(err)
         if resp['Status']['ActionStatus'] != u'success':
             try:
