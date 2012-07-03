@@ -47,13 +47,8 @@ that looks like:
 The default location for this file is ~/.packagetrack.
 
 """
-import os.path
-from ConfigParser import ConfigParser
 
-from .service.fedex_interface import FedexInterface
-from .service.ups_interface   import UPSInterface
-from .service.usps_interface  import USPSInterface
-from .service.capost_interface import CanadaPostInterface
+from .configuration import DotFileConfig
 
 __authors__     = 'Scott Torborg, Michael Stella'
 __credits__     = ['Scott Torborg','Michael Stella']
@@ -62,78 +57,31 @@ __maintainer__  = 'Scott Torborg'
 __status__      = 'Development'
 __version__     = '0.3'
 
-_interfaces = {}
-
-config = ConfigParser()
-
-
-def register_interface(shipper, interface):
-    global _interfaces
-    _interfaces[shipper] = interface
-
-
-def get_interface(shipper):
-        if shipper in _interfaces:
-            return _interfaces[shipper]
-        else:
-            raise UnsupportedShipper
-
-
-register_interface('UPS', UPSInterface())
-register_interface('FedEx', FedexInterface())
-register_interface('USPS', USPSInterface())
-register_interface('CanadaPost', CanadaPostInterface())
-
-
-class UnsupportedShipper(Exception):
-    pass
-
+config = DotFileConfig()
 
 class Package(object):
     """A package to be tracked."""
 
-    def __init__(self, tracking_number, configfile=None):
-        """
-            Options:
-                tracking_number - required
-                configfile - optional path to a config file, see docs.
-        """
+    _carrier = None
 
-        # allow the user to specify an alternate config file
-        if not configfile:
-            configfile = os.path.expanduser('~/.packagetrack')
+    def __init__(self, tracking_number):
+        self.tracking_number = tracking_number
 
-        if not os.path.exists(configfile):
-            raise IOError("Config file does not exist - create one?")
-
-        config.read([configfile])
-
-        self.tracking_number = tracking_number.upper().replace(' ', '')
-        self.shipper = None
-        for shipper, iface in _interfaces.iteritems():
-            if iface.identify(self.tracking_number):
-                self.shipper = shipper
-                break
+    @property
+    def shipper(self):
+        if self._carrier is None:
+            self._carrier = service.identify_tracking_number(
+                self.tracking_number)
+        return self._carrier
 
     def track(self):
         """Tracks the package, returning a TrackingInfo object"""
 
-        return get_interface(self.shipper).track(self.tracking_number)
+        return self.shipper.track(self.tracking_number)
 
+    @property
     def url(self):
         """Returns a URL that can be used to go to the shipper's
         tracking website, to track this package."""
 
-        return get_interface(self.shipper).url(self.tracking_number)
-
-    def validate(self):
-        """Validates this package's tracking number, returns true or false"""
-        return get_interface(self.shipper).validate(self.tracking_number)
-
-
-def linkify_tracking_number(tracking_number):
-    from webhelpers.html.tags import HTML
-    try:
-        return HTML.a(tracking_number, href=Package(tracking_number).url())
-    except UnsupportedShipper:
-        return tracking_number
+        return self.shipper.url(self.tracking_number)
