@@ -48,7 +48,7 @@ The default location for this file is ~/.packagetrack.
 
 """
 
-__credits__     = ['Scott Torborg','Michael Stella', 'Alex Headley']
+__credits__     = ['Scott Torborg', 'Michael Stella', 'Alex Headley']
 __authors__     = ', '.join(__credits__)
 __license__     = 'GPL'
 __maintainer__  = __credits__[2]

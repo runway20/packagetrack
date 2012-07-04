@@ -1,6 +1,6 @@
 import os
 
-from ..configuration import DictConfig, ConfigKeyError
+from ..configuration import NullConfig, ConfigKeyError
 
 _carriers = {}
 
@@ -69,7 +69,7 @@ def auto_register_carriers(config):
         register_carrier(carrier_iface, config)
 
 class BaseInterface(object):
-    DEFAULT_CFG = DictConfig({})
+    DEFAULT_CFG = NullConfig()
 
     def __init__(self, config):
         self._config = config
