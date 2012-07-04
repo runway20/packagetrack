@@ -46,7 +46,7 @@ class TrackingInfo(dict):
     will be as well, unless it wasn't provided in which case it will be None
     """
 
-    _repr_template = '<TrackingInfo(delivery_date={i.delivery_date!r}, status={i.status!r}, last_update={i.last_update!r}, location={i.location!r})>'
+    _repr_template = '<TrackingInfo({i.tracking_number!r})>'
 
     def __init__(self, tracking_number, delivery_date=None, **kwargs):
         self.tracking_number = tracking_number
@@ -125,4 +125,4 @@ class TrackingEvent(dict):
         self[name] = val
 
     def __repr__(self):
-        return self._repr_template.format(e=self, ts=e.timestamp.isoformat())
+        return self._repr_template.format(e=self, ts=self.timestamp.isoformat())
