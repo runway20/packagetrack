@@ -2,7 +2,7 @@ import suds
 import datetime
 
 from ..data import TrackingInfo
-from ..service import BaseInterface, TrackingFailure
+from ..carriers import BaseInterface, TrackingApiFailure
 
 class CanadaPostInterface(BaseInterface):
     SHORT_NAME = 'CAPost'
@@ -23,6 +23,7 @@ class CanadaPostInterface(BaseInterface):
             16: lambda tn: tn.isdigit(),
         }.get(len(tracking_number), lambda tn: False)(tracking_number)
 
+    @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
         client = self._get_client()
         try:
@@ -31,7 +32,7 @@ class CanadaPostInterface(BaseInterface):
             detail = client.service.GetTrackingDetail(
                 locale='EN', pin=tracking_number)
         except suds.WebFault as e:
-            raise TrackingFailure(e)
+            raise TrackingApiFailure(e)
         info = self._parse_response(summary, detail)
         info.tracking_number = tracking_number
         return info
@@ -51,9 +52,9 @@ class CanadaPostInterface(BaseInterface):
 
     def _parse_response(self, summary_response, detail_response):
         if 'messages' in self.get_keys(summary_response):
-            raise TrackFailed(summary_response['messages'])
+            raise TrackingApiFailure(summary_response['messages'])
         elif 'messages' in self.get_keys(detail_response):
-            raise TrackFailed(detail_response['messages'])
+            raise TrackingApiFailure(detail_response['messages'])
         summary = summary_response['tracking-summary']['pin-summary'][0]
         details = detail_response['tracking-detail']
         delivery_date = datetime.datetime.strptime(

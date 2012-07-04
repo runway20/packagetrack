@@ -5,7 +5,7 @@ from fedex.base_service import FedexError
 from fedex.services.track_service import FedexTrackRequest, FedexInvalidTrackingNumber
 
 from ..data import TrackingInfo
-from ..service import BaseInterface, TrackingApiFailure, UnrecognizedTrackingNumber, InvalidTrackingNumber
+from ..carriers import BaseInterface, TrackingApiFailure, TrackingNumberFailure
 
 class FedexInterface(BaseInterface):
     SHORT_NAME = 'FedEx'
@@ -13,10 +13,8 @@ class FedexInterface(BaseInterface):
     CONFIG_NS = SHORT_NAME
     _url_template = 'http://www.fedex.com/Tracking?tracknumbers={tracking_number}'
 
+    @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
-        if not self.validate(tracking_number):
-            raise InvalidTrackingNumber()
-
         track = FedexTrackRequest(self._get_cfg())
 
         track.TrackPackageIdentifier.Type = 'TRACKING_NUMBER_OR_DOORTAG'
@@ -27,7 +25,7 @@ class FedexInterface(BaseInterface):
         try:
             track.send_request()
         except FedexInvalidTrackingNumber as err:
-            raise UnrecognizedTrackingNumber(err)
+            raise TrackingNumberFailure(err)
         except FedexError as err:
             raise TrackingApiFailure(err)
 

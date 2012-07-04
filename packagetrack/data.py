@@ -1,6 +1,6 @@
 from operator import attrgetter
 
-from .service import identify_tracking_number
+from .carriers import identify_tracking_number
 
 class Package(object):
     """A package to be tracked."""

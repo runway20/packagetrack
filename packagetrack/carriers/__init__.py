@@ -1,8 +1,9 @@
 import os
+from functools import wraps
 
 from ..configuration import NullConfig, ConfigKeyError
 
-_carriers = {}
+__carriers = {}
 
 class TrackingFailure(Exception):
     """Generic tracking failure, subclassed by more specific
@@ -45,11 +46,11 @@ class InvalidTrackingNumber(TrackingFailure):
 
 def register_carrier(carrier_iface, config):
     carrier = carrier_iface(config)
-    _carriers[str(carrier)] = carrier
+    __carriers[str(carrier)] = carrier
     return carrier
 
 def identify_tracking_number(tracking_number):
-    for carrier in _carriers.values():
+    for carrier in __carriers.values():
         if carrier.identify(tracking_number):
             return carrier
     else:
@@ -77,6 +78,16 @@ class BaseInterface(object):
     def __str__(self):
         return self.LONG_NAME
 
+    @classmethod
+    def require_valid_tracking_number(cls, func):
+        @wraps(func)
+        def wrapper(self, tracking_number):
+            if not self.identify(tracking_number):
+                raise InvalidTrackingNumber(tracking_number)
+            else:
+                return func(self, tracking_number)
+        return wrapper
+
     def identify(self, tracking_number):
         raise NotImplementedError()
 
@@ -91,7 +102,7 @@ class BaseInterface(object):
             value = self._config.get_value(self.CONFIG_NS, *keys)
         except ConfigKeyError as err:
             try:
-                value = self.DEFAULT_CFG.get_value(*keys)
+                value = self.DEFAULT_CFG.get_value(self.CONFIG_NS, *keys)
             except ConfigKeyError:
                 raise err
         return value

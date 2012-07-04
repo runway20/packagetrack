@@ -1,5 +1,5 @@
 import os.path
-from ConfigParser import ConfigParser, NoOptionError
+from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 
 class ConfigError(Exception):
     """Generic configuration error exception
@@ -35,12 +35,10 @@ class DotFileConfig(ConfigurationProvider):
     def get_value(self, *keys):
         try:
             return self._config.get(*keys)
-        except NoOptionError as err:
+        except (NoSectionError, NoOptionError) as err:
             raise ConfigKeyError(err)
 
 class DictConfig(ConfigurationProvider):
-    _config = None
-
     def __init__(self, config_dict):
         self._config = config_dict
 

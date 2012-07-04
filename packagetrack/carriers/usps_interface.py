@@ -3,7 +3,7 @@ import requests
 
 from ..configuration import DictConfig
 from ..data import TrackingInfo
-from ..service import BaseInterface, TrackingFailure
+from ..carriers import BaseInterface, TrackingApiFailure, TrackingNumberFailure
 from ..xml_dict import xml_to_dict
 
 class USPSInterface(BaseInterface):
@@ -46,6 +46,7 @@ class USPSInterface(BaseInterface):
                 x.isdigit(),
         }.get(len(tracking_number), lambda x: False)(tracking_number)
 
+    @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
@@ -62,12 +63,12 @@ class USPSInterface(BaseInterface):
         # this is a system error
         if 'Error' in rsp:
             error = rsp['Error']['Description']
-            raise TrackingFailure(error)
+            raise TrackingApiFailure(error)
 
         # this is a result with an error, like "no such package"
         if 'Error' in rsp['TrackResponse']['TrackInfo']:
             error = rsp['TrackResponse']['TrackInfo']['Error']['Description']
-            raise TrackingFailure(error)
+            raise TrackingNumberFailure(error)
 
         # make sure the events list is a list
         try:
@@ -105,8 +106,6 @@ class USPSInterface(BaseInterface):
             )
 
         for e in events:
-            location = self._getTrackingLocation(e)
-
             trackinfo.create_event(
                 location = self._getTrackingLocation(e),
                 timestamp= self._getTrackingDate(e),
@@ -116,8 +115,8 @@ class USPSInterface(BaseInterface):
         return trackinfo
 
     def _send_request(self, tracking_number):
-        url = "%s%s" % (self.api_url[self._cfg_value('server')],
-                        urllib.quote(self._build_request(tracking_number)))
+        url = self.api_url[self._cfg_value('server')] + \
+            self._build_request(tracking_number)
         return requests.get(url).text
 
     def _getTrackingDate(self, node):

@@ -2,7 +2,7 @@ import requests
 from datetime import datetime, date, time
 
 from ..configuration import DictConfig
-from ..service import BaseInterface, TrackingFailure
+from ..carriers import BaseInterface, TrackingFailure
 from ..xml_dict import dict_to_xml, xml_to_dict
 from ..data import TrackingInfo
 
@@ -22,6 +22,7 @@ class UPSInterface(BaseInterface):
             tracking_number.isalnum() and \
             self._check_tracking_code(tracking_number[2:])
 
+    @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
@@ -77,7 +78,7 @@ class UPSInterface(BaseInterface):
         try:
             service_code = root['Shipment']['Service']['Code']
         except KeyError:
-            raise TrackingFailure(root)
+            raise TrackingApiFailure(root)
         service_description = 'UPS %s' % root['Shipment']['Service']['Description']
 
         package = root['Shipment']['Package']
