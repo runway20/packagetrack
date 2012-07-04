@@ -31,10 +31,9 @@ class UPSInterface(BaseInterface):
     def _check_tracking_code(self, tracking_code):
         digits = map(lambda d: int(d) if d.isdigit() else ((ord(d) - 63) % 10),
             tracking_code[:-1].upper())
-        check_digit = int(tracking_code[-1])
-
         total = (sum(digits[1::2]) * 2) + sum(digits[::2])
-        return (10 - (total % 10)) == check_digit
+        check_digit = (10 - (total % 10)) if total % 10 != 0 else 0
+        return check_digit == int(tracking_code[-1])
 
     def _build_access_request(self):
         req = {
