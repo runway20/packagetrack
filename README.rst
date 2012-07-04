@@ -51,7 +51,7 @@ API Configuration
 To enable package tracking (not just finding URLs or matching TNs to carriers),
 you will need to get API credentials for most of the carriers you wish to use.
 The default configuration method is to read the config values from
-~/.packagetrack, which looks like this:
+~/.packagetrack, which looks like this::
 
     [UPS]
     license_number = XXXXXXXXXXXXXXXX
@@ -68,7 +68,7 @@ The default configuration method is to read the config values from
     userid = XXXXXXXXXXXX
     password = XXXXXXXXXXXX
 
-You can specify an alternate location for the config file like so:
+You can specify an alternate location for the config file like so::
 
     >>> from packagetrack.configuration import DotFileConfig
     >>> cfg = DotFileConfig('/path/to/file')
