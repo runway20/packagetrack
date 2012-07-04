@@ -1,5 +1,5 @@
 import os.path
-from configparser import ConfigParser
+from ConfigParser import ConfigParser, NoOptionError
 
 class ConfigError(Exception):
     """Generic configuration error exception
@@ -13,7 +13,11 @@ class ConfigKeyError(KeyError):
 
 class ConfigurationProvider(object):
     def get_value(self, key):
-        pass
+        raise NotImplementedError()
+
+class NullConfig(ConfigurationProvider):
+    def get_value(self, *keys):
+        raise ConfigKeyError('NullConfig provides no values')
 
 class DotFileConfig(ConfigurationProvider):
     _config = None
@@ -29,7 +33,10 @@ class DotFileConfig(ConfigurationProvider):
         self._config.read([config_file])
 
     def get_value(self, *keys):
-        pass
+        try:
+            return self._config.get(*keys)
+        except NoOptionError as err:
+            raise ConfigKeyError(err)
 
 class DictConfig(ConfigurationProvider):
     _config = None

@@ -48,40 +48,20 @@ The default location for this file is ~/.packagetrack.
 
 """
 
-from .configuration import DotFileConfig
-
-__authors__     = 'Scott Torborg, Michael Stella'
-__credits__     = ['Scott Torborg','Michael Stella']
+__credits__     = ['Scott Torborg','Michael Stella', 'Alex Headley']
+__authors__     = ', '.join(__credits__)
 __license__     = 'GPL'
-__maintainer__  = 'Scott Torborg'
+__maintainer__  = __credits__[2]
 __status__      = 'Development'
 __version__     = '0.3'
 
-config = DotFileConfig()
+from .configuration import DotFileConfig, NullConfig
+from .data import Package
+from .service import auto_register_carriers
 
-class Package(object):
-    """A package to be tracked."""
+try:
+    config = DotFileConfig()
+except ConfigError:
+    config = NullConfig()
 
-    _carrier = None
-
-    def __init__(self, tracking_number):
-        self.tracking_number = tracking_number
-
-    @property
-    def shipper(self):
-        if self._carrier is None:
-            self._carrier = service.identify_tracking_number(
-                self.tracking_number)
-        return self._carrier
-
-    def track(self):
-        """Tracks the package, returning a TrackingInfo object"""
-
-        return self.shipper.track(self.tracking_number)
-
-    @property
-    def url(self):
-        """Returns a URL that can be used to go to the shipper's
-        tracking website, to track this package."""
-
-        return self.shipper.url(self.tracking_number)
+auto_register_carriers(config)

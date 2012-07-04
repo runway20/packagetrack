@@ -1,6 +1,8 @@
-from abc import ABCMeta, abstractmethod
+import os
 
-carriers = {}
+from ..configuration import DictConfig, ConfigKeyError
+
+_carriers = {}
 
 class TrackingFailure(Exception):
     """Generic tracking failure, subclassed by more specific
@@ -41,37 +43,55 @@ class InvalidTrackingNumber(TrackingFailure):
     """
     pass
 
-def register_carrier(carrier):
-    if carrier.LONG_NAME in carriers:
-        raise Exception('Carrier {name} already registered'.format(
-            name=carrier.LONG_NAME))
-    else:
-        carriers[carrier.LONG_NAME] = carrier
+def register_carrier(carrier_iface, config):
+    carrier = carrier_iface(config)
+    _carriers[str(carrier)] = carrier
+    return carrier
 
 def identify_tracking_number(tracking_number):
-    for carrier in carriers.values():
+    for carrier in _carriers.values():
         if carrier.identify(tracking_number):
             return carrier
     else:
         raise TrackingNumberFailure(tracking_number)
 
-class CarrierInterface(object):
-    __metaclass__ = ABCMeta
+def auto_register_carriers(config):
+    carrier_modules = map(lambda m: __import__(m, fromlist='*'),
+        [__name__ + '.' + f.rsplit('.', 1)[0] \
+            for f in os.listdir(os.path.dirname(__file__)) \
+                if f.endswith('.py') and not f.startswith('_')])
+    carrier_ifaces = [getattr(m, c) for m in carrier_modules \
+        for c in dir(m) \
+            if c.endswith('Interface') and \
+                issubclass(getattr(m, c), BaseInterface) and \
+                getattr(m, c) is not BaseInterface]
+    for carrier_iface in carrier_ifaces:
+        register_carrier(carrier_iface, config)
 
-    def __init__(self):
-        register_carrier(self)
+class BaseInterface(object):
+    DEFAULT_CFG = DictConfig({})
+
+    def __init__(self, config):
+        self._config = config
 
     def __str__(self):
         return self.LONG_NAME
 
-    @abstractmethod
     def identify(self, tracking_number):
-        pass
+        raise NotImplementedError()
 
-    @abstractmethod
     def track(self, tracking_number):
-        pass
+        raise NotImplementedError()
 
-    @abstractmethod
     def url(self, tracking_number):
-        pass
+        return self._url_template.format(tracking_number=tracking_number)
+
+    def _cfg_value(self, *keys):
+        try:
+            value = self._config.get_value(self.CONFIG_NS, *keys)
+        except ConfigKeyError as err:
+            try:
+                value = self.DEFAULT_CFG.get_value(*keys)
+            except ConfigKeyError:
+                raise err
+        return value

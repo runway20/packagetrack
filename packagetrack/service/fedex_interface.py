@@ -4,20 +4,14 @@ from fedex.config import FedexConfig
 from fedex.base_service import FedexError
 from fedex.services.track_service import FedexTrackRequest, FedexInvalidTrackingNumber
 
-import packagetrack
 from ..data import TrackingInfo
-from ..service import CarrierInterface, TrackingApiFailure, UnrecognizedTrackingNumber, InvalidTrackingNumber
+from ..service import BaseInterface, TrackingApiFailure, UnrecognizedTrackingNumber, InvalidTrackingNumber
 
-class FedexInterface(CarrierInterface):
+class FedexInterface(BaseInterface):
     SHORT_NAME = 'FedEx'
     LONG_NAME = SHORT_NAME
-
-    _config_ns = SHORT_NAME
-    _url_template = 'http://www.fedex.com/Tracking?tracknumbers={tn}'
-
-    def __init__(self):
-        super(self, CanadaPostInterface).__init__()
-        self._username = config.get_value(self._config_ns, 'username')
+    CONFIG_NS = SHORT_NAME
+    _url_template = 'http://www.fedex.com/Tracking?tracknumbers={tracking_number}'
 
     def track(self, tracking_number):
         if not self.validate(tracking_number):
@@ -57,9 +51,6 @@ class FedexInterface(CarrierInterface):
                 self._validate_ssc18(x)),
         }.get(len(tracking_number), lambda x: False)(tracking_number)
 
-    def url(self, tracking_number):
-        return self._url_template.format(tn=tracking_number)
-
     def _parse_response(self, rsp, tracking_number):
         """Parse the track response and return a TrackingInfo object"""
 
@@ -82,7 +73,7 @@ class FedexInterface(CarrierInterface):
                                     rsp.ActualDeliveryAddress.CountryCode,
                                 ))
             except AttributeError:
-                location = 'N/A'
+                location = 'UNKNOWN'
 
         else:
             delivery_detail = None
@@ -122,43 +113,21 @@ class FedexInterface(CarrierInterface):
                             e.Address.CountryCode,
                         ))
         except:
-            return None
+            return 'UNKNOWN'
 
 
     def _get_cfg(self):
         """Makes and returns a FedexConfig object from the packagetrack
            configuration.  Caches it, so it doesn't create each time."""
 
-        config = packagetrack.config
-
-        # got one cached, so just return it
-        if self.cfg:
-            return self.cfg
-
-        self.cfg = FedexConfig(
-            key                 = config.get('FedEx', 'key'),
-            password            = config.get('FedEx', 'password'),
-            account_number      = config.get('FedEx', 'account_number'),
-            meter_number        = config.get('FedEx', 'meter_number'),
+        return FedexConfig(
+            key = self._cfg_value('key'),
+            password = self._cfg_value('password'),
+            account_number = self._cfg_value('account_number'),
+            meter_number = self._cfg_value('meter_number'),
             use_test_server     = False,
             express_region_code = 'US',
         )
-
-        # these are optional, and afaik, not really used for tracking
-        # at all, but you can still set them, so....
-        if config.has_option('FedEx', 'express_region_code'):
-            self.cfg.express_region_code = config.get('FedEx',
-                                            'express_region_code')
-
-        if config.has_option('FedEx', 'integrator_id'):
-            self.cfg.integrator_id = config.get('FedEx',
-                                            'integrator_id')
-
-        if config.has_option('FedEx', 'use_test_server'):
-            self.cfg.use_test_server = config.getboolean('FedEx',
-                                            'use_test_server')
-
-        return self.cfg
 
     def _validate_ground96(self, tracking_number):
         """Validates ground code 128 ("96") bar codes

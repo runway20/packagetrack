@@ -1,27 +1,20 @@
 import requests
 from datetime import datetime, date, time
 
-from packagetrack import config
-from ..service import CarrierInterface, TrackingFailure
+from ..configuration import DictConfig
+from ..service import BaseInterface, TrackingFailure
 from ..xml_dict import dict_to_xml, xml_to_dict
 from ..data import TrackingInfo
 
-class UPSInterface(CarrierInterface):
+class UPSInterface(BaseInterface):
     SHORT_NAME = 'UPS'
     LONG_NAME = SHORT_NAME
+    CONFIG_NS = SHORT_NAME
+    DEFAULT_CFG = DictConfig({CONFIG_NS:{'lang': 'en-US'}})
 
     _api_url = 'https://wwwcie.ups.com/ups.app/xml/Track'
-    _access_request_attrs = {'xml:lang': 'en-US'}
-    _config_ns = SHORT_NAME
-    _url_template = 'http://wwwapps.ups.com/WebTracking/processInputRequest?'
-        'TypeOfInquiryNumber=T&InquiryNumber1={tn}'
-
-    def __init__(self):
-        super(self, UPSInterface).__init__()
-        self._access_license_number = config.get_value(
-            self._config_ns, 'license_number')
-        self._user_id = config.get_value( self._config_ns, 'user_id')
-        self._password = config.get_value( self._config_ns, 'password')
+    _url_template = 'http://wwwapps.ups.com/WebTracking/processInputRequest?' \
+        'TypeOfInquiryNumber=T&InquiryNumber1={tracking_number}'
 
     def identify(self, tracking_number):
         return tracking_number.startswith('1Z') and \
@@ -33,26 +26,23 @@ class UPSInterface(CarrierInterface):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
 
-    def url(self, tracking_number):
-        return self._url_template.format(tn=tracking_number)
-
     def _check_tracking_code(self, tracking_code):
         digits = map(lambda d: int(d) if d.isdigit() else ((ord(d) - 63) % 10),
             tracking_code[:-1].upper())
         check_digit = int(tracking_code[-1])
 
-        total = (sum(digits[::2]) * 2) + sum(digits[1::2])
+        total = (sum(digits[1::2]) * 2) + sum(digits[::2])
         return (10 - (total % 10)) == check_digit
 
     def _build_access_request(self):
         req = {
             'AccessRequest': {
-                'AccessLicenseNumber': self._access_license_number,
-                'UserId': self._user_id,
-                'Password': self._password,
+                'AccessLicenseNumber': self._cfg_value('license_number'),
+                'UserId': self._cfg_value('user_id'),
+                'Password': self._cfg_value('password'),
             }
         }
-        return dict_to_xml(req, self._access_request_attrs)
+        return dict_to_xml(req, {'xml:lang': self._cfg_value('lang')})
 
     def _build_track_request(self, tracking_number):
         data = {

@@ -1,15 +1,47 @@
 from operator import attrgetter
 
+from .service import identify_tracking_number
+
+class Package(object):
+    """A package to be tracked."""
+
+    _carrier = None
+
+    def __init__(self, tracking_number, carrier=None):
+        self.tracking_number = tracking_number
+        if carrier is not None:
+            self._carrier = carrier
+
+    @property
+    def carrier(self):
+        if self._carrier is None:
+            self._carrier = identify_tracking_number(
+                self.tracking_number)
+        return self._carrier
+
+    def track(self):
+        """Tracks the package, returning a TrackingInfo object"""
+
+        return self.carrier.track(self.tracking_number)
+
+    @property
+    def url(self):
+        """Returns a URL that can be used to go to the carrier's
+        tracking website, to track this package."""
+
+        return self.carrier.url(self.tracking_number)
+
 class TrackingInfo(dict):
     """Generic tracking information object returned by a tracking request
     """
 
     _repr_template = '<TrackingInfo(delivery_date={i.delivery_date!r}, status={i.status!r}, last_update={i.last_update!r}, location={i.location!r})>'
 
-    def __init__(self, tracking_number, delivery_date=None):
+    def __init__(self, tracking_number, delivery_date=None, **kwargs):
         self.tracking_number = tracking_number
         self.delivery_date = delivery_date
         self.events = []
+        self.update(kwargs)
 
     def __getattr__(self, name):
         return self[name]
@@ -50,8 +82,8 @@ class TrackingInfo(dict):
 class TrackingEvent(dict):
     """An individual tracking event, i.e. a status change
     """
+    _repr_template = '<TrackingEvent(timestamp={e.timestamp!r}, location={e.location!r}, detail={e.detail!r})>'
 
-    self._repr_template = '<TrackingEvent(timestamp={e.timestamp!r}, location={e.location!r}, detail={e.detail!r})>'
 
     def __init__(self, timestamp, location, detail, **kwargs):
         self.timestamp = timestamp

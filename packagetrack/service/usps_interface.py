@@ -1,26 +1,27 @@
 from datetime import datetime, time
 import requests
 
-from packagetrack import config
+from ..configuration import DictConfig
 from ..data import TrackingInfo
-from ..service import CarrierInterface, TrackingFailure
+from ..service import BaseInterface, TrackingFailure
 from ..xml_dict import xml_to_dict
 
-class USPSInterface(CarrierInterface):
+class USPSInterface(BaseInterface):
     SHORT_NAME = 'USPS'
     LONG_NAME = 'U.S. Postal Service'
+    CONFIG_NS = SHORT_NAME
+    DEFAULT_CFG = DictConfig({CONFIG_NS:{'server': 'production'}})
 
     _api_urls = {
-        'secure_test': 'https://secure.shippingapis.com/ShippingAPITest.dll?'
+        'secure_test': 'https://secure.shippingapis.com/ShippingAPITest.dll?' \
             'API=TrackV2&XML=',
-        'test':        'http://testing.shippingapis.com/ShippingAPITest.dll?'
+        'test':        'http://testing.shippingapis.com/ShippingAPITest.dll?' \
             'API=TrackV2&XML=',
-        'production':  'http://production.shippingapis.com/ShippingAPI.dll?'
+        'production':  'http://production.shippingapis.com/ShippingAPI.dll?' \
             'API=TrackV2&XML=',
-        'secure':      'https://secure.shippingapis.com/ShippingAPI.dll?'
+        'secure':      'https://secure.shippingapis.com/ShippingAPI.dll?' \
             'API=TrackV2&XML=',
     }
-    _config_ns = SHORT_NAME
     _service_types = {
         'EA': 'express mail',
         'EC': 'express mail international',
@@ -29,13 +30,8 @@ class USPSInterface(CarrierInterface):
         'RF': 'registered foreign',
 #        'EJ': 'something?',
     }
-    _url_template = 'http://trkcnfrm1.smi.usps.com/PTSInternetWeb/'
-        'InterLabelInquiry.do?origTrackNum={tn}'
-
-    def __init__(self):
-        super(self, USPSInterface).__init__()
-        self._userid = config.get_value(self._config_ns, 'userid')
-        self._server_type = config.get_value(self._config_ns, 'server')
+    _url_template = 'http://trkcnfrm1.smi.usps.com/PTSInternetWeb/' \
+        'InterLabelInquiry.do?origTrackNum={tracking_number}'
 
     def identify(self, tracking_number):
         return {
@@ -54,14 +50,11 @@ class USPSInterface(CarrierInterface):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
 
-    def url(self, tracking_number):
-        return self._url_template.format(tn=tracking_number)
-
     def _build_request(self, tracking_number):
         config = packagetrack.config
 
         return '<TrackFieldRequest USERID="%s"><TrackID ID="%s"/></TrackFieldRequest>' % (
-                self._userid, tracking_number)
+                self._cfg_value('userid'), tracking_number)
 
     def _parse_response(self, raw, tracking_number):
         rsp = xml_to_dict(raw)
@@ -123,7 +116,7 @@ class USPSInterface(CarrierInterface):
         return trackinfo
 
     def _send_request(self, tracking_number):
-        url = "%s%s" % (self.api_url[self._server_type],
+        url = "%s%s" % (self.api_url[self._cfg_value('server')],
                         urllib.quote(self._build_request(tracking_number)))
         return requests.get(url).text
 
