@@ -3,10 +3,11 @@ import hashlib
 import requests
 from pytz import timezone
 
+from ..carriers import BaseInterface
 from ..configuration import DictConfig
 from ..data import TrackingInfo, TrackingEvent
 from ..xml_dict import xml_to_dict
-from ..carriers import BaseInterface, TrackingFailure, TrackingApiFailure
+from .errors import *
 
 class DHLInterface(BaseInterface):
     SHORT_NAME = 'DHL'

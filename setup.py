@@ -9,27 +9,31 @@ except ImportError:
 
 
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
-
+    content = None
+    with open(os.path.join(os.path.dirname(__file__)), 'r') as f:
+        content = f.read()
+    return content
 
 import packagetrack
 
-           
-setup(name='packagetrack',
-      version=packagetrack.__version__,
-      author="Scott Torborg",
-      author_email="storborg@mit.edu",
-      license="GPL",
-      keywords="track packages ups fedex usps shipping",
-      url="http://github.com/storborg/packagetrack",
-      description='Track packages.',
-      packages=find_packages(exclude=['ez_setup', 'tests']),
-      long_description=read('README.rst'),
-      test_suite='nose.collector',
-      zip_safe=False,
-      classifiers=[
-          "Development Status :: 3 - Alpha",
-          "License :: OSI Approved :: GNU General Public License (GPL)",
-          "Intended Audience :: Developers",
-          "Natural Language :: English",
-          "Programming Language :: Python"])
+setup(
+    name='packagetrack',
+    version=packagetrack.__version__,
+    author="Scott Torborg",
+    author_email="storborg@mit.edu",
+    license="GPL",
+    keywords="track packages ups fedex usps dhl shipping",
+    url="http://github.com/aheadley/packagetrack",
+    description='Track packages.',
+    packages=find_packages(exclude=['ez_setup', 'tests']),
+    long_description=read('README.rst'),
+    test_suite='nose.collector',
+    zip_safe=False,
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "Programming Language :: Python"
+    ]
+)

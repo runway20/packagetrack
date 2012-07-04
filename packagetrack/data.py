@@ -14,25 +14,36 @@ class Package(object):
 
     @property
     def carrier(self):
+        """Get the name of this package's carrier
+        """
+
         if self._carrier is None:
             self._carrier = identify_tracking_number(
                 self.tracking_number)
         return self._carrier
 
     def track(self):
-        """Tracks the package, returning a TrackingInfo object"""
+        """Get the tracking info for this package, returns a TrackingInfo object
+        """
 
         return self.carrier.track(self.tracking_number)
 
     @property
     def url(self):
         """Returns a URL that can be used to go to the carrier's
-        tracking website, to track this package."""
+        tracking website, to track this package.
+        """
 
         return self.carrier.url(self.tracking_number)
 
 class TrackingInfo(dict):
     """Generic tracking information object returned by a tracking request
+
+    Only the tracking_number, delivery_date, location, last_update and status
+    are guaranteed to be available, but a carrier may add additional attributes/info.
+
+    timestamp and last_update will always be datetime objects, the delivery_date
+    will be as well, unless it wasn't provided in which case it will be None
     """
 
     _repr_template = '<TrackingInfo(delivery_date={i.delivery_date!r}, status={i.status!r}, last_update={i.last_update!r}, location={i.location!r})>'
@@ -50,40 +61,56 @@ class TrackingInfo(dict):
         self[name] = val
 
     def __repr__(self):
-        # return slightly different info if it's delivered
         return self._repr_template.format(i=self)
 
     @property
     def location(self):
+        """A shortcut to the location of the latest event for this package
+        """
         return self.events[-1].location
 
     @property
     def last_update(self):
+        """Shortcut to the timestamp of the latest event for this package
+        """
         return self.events[-1].timestamp
 
     @property
     def status(self):
+        """Shortcut to the detail of the latest event for this package
+        """
         return self.events[-1].detail
 
     def create_event(self, timestamp, location, detail, **kwargs):
+        """Create a new event with these attributes, events do not need to be added
+        in order
+        """
         event = TrackingEvent(timestamp, location, detail)
         event.update(kwargs)
         return self.add_event(event)
 
     def add_event(self, event):
+        """Add a new TrackingEvent object to this package, events do not need to
+        be added in order
+        """
         self.events = self.sort_events(self.events + [event])
         return event
 
     def sort_events(self, events=None):
+        """Sort a list of events by timestamp, defaults to this package's events
+        """
         if events is None:
             events = self.events
         return sorted(events, key=attrgetter('timestamp'))
 
 class TrackingEvent(dict):
-    """An individual tracking event, i.e. a status change
-    """
-    _repr_template = '<TrackingEvent(timestamp={e.timestamp!r}, location={e.location!r}, detail={e.detail!r})>'
+    """An individual tracking event, like a status change
 
+    Only the timestamp, location, and detail attributes are required, but a
+    carrier may add other information if available. timestamp is always a
+    datetime object.
+    """
+    _repr_template = '<TrackingEvent(timestamp={ts}, location={e.location!r}, detail={e.detail!r})>'
 
     def __init__(self, timestamp, location, detail, **kwargs):
         self.timestamp = timestamp
@@ -98,4 +125,4 @@ class TrackingEvent(dict):
         self[name] = val
 
     def __repr__(self):
-        return self._repr_template.format(e=self)
+        return self._repr_template.format(e=self, ts=e.timestamp.isoformat())

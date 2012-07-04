@@ -3,8 +3,9 @@ import requests
 
 from ..configuration import DictConfig
 from ..data import TrackingInfo
-from ..carriers import BaseInterface, TrackingApiFailure, TrackingNumberFailure
+from ..carriers import BaseInterface
 from ..xml_dict import xml_to_dict
+from .errors import *
 
 class USPSInterface(BaseInterface):
     SHORT_NAME = 'USPS'

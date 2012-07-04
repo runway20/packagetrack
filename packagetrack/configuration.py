@@ -12,14 +12,23 @@ class ConfigKeyError(KeyError):
     pass
 
 class ConfigurationProvider(object):
-    def get_value(self, key):
+    """Basic configuration provider interface, other providers should inherit
+    from this
+    """
+    def get_value(self, *keys):
         raise NotImplementedError()
 
 class NullConfig(ConfigurationProvider):
+    """Simple placeholder provider, raises ConfigKeyError for all keys
+    """
     def get_value(self, *keys):
         raise ConfigKeyError('NullConfig provides no values')
 
 class DotFileConfig(ConfigurationProvider):
+    """Provides compatibility with older packagetrack versions by reading
+    from the .packagetrack config file. Can read from an alternative
+    file as well.
+    """
     _config = None
 
     def __init__(self, config_file=None):
@@ -38,12 +47,11 @@ class DotFileConfig(ConfigurationProvider):
         except (NoSectionError, NoOptionError) as err:
             raise ConfigKeyError(err)
 
-class DictConfig(ConfigurationProvider):
-    def __init__(self, config_dict):
-        self._config = config_dict
-
+class DictConfig(ConfigurationProvider, dict):
+    """Simple config provider that acts like a dict
+    """
     def get_value(self, *keys):
-        node = self._config
+        node = self
         for key in keys:
             try:
                 node = node.get(key)

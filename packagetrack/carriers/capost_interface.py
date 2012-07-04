@@ -2,7 +2,8 @@ import suds
 import datetime
 
 from ..data import TrackingInfo
-from ..carriers import BaseInterface, TrackingApiFailure
+from ..carriers import BaseInterface
+from .errors import *
 
 class CanadaPostInterface(BaseInterface):
     SHORT_NAME = 'CAPost'

@@ -6,3 +6,13 @@ Version 0.1::
 Version 0.2::
 
     Added check for FedEx Express tracking numbers, which can be 12 digits.
+
+Version 0.4::
+
+    Lots of behind the scenes changes, most are backwards-compatible
+        Improved carrier interface loading, made automatic
+        Cleaned up module layout a little
+        Cleaned up error handling by the carriers
+        Renamed services to carriers
+    Changed Package.url to a property from a method
+    Added DHL and CanadaPost support

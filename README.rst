@@ -5,8 +5,9 @@ packagetrack - Track packages
 :Authors:
     Scott Torborg (storborg)
     Michael Stella (alertedsnake)
+    Alex Headley (aheadley)
 
-:Version: 0.3
+:Version: 0.4
 
 This library tracks packages.
 
@@ -29,10 +30,9 @@ Example
 
 >>> from packagetrack import Package
 >>> package = Package('1Z9999999999999999')
-# Identify packages (UPS, FedEx, and USPS)
->>> package.shipper
+# Identify packages (UPS, FedEx, DHL, CanadaPost, and USPS)
+>>> package.carrier
 'UPS'
-# Track packages (UPS only, requires API access)
 >>> info = package.track()
 >>> print info.status
 IN TRANSIT TO
@@ -40,16 +40,18 @@ IN TRANSIT TO
 2010-06-25 00:00:00
 >>> print info.last_update
 2010-06-19 00:54:00
-# Get tracking URLs (UPS, FedEx, and USPS)
->>> print package.url()
+# Get tracking URLs
+>>> print package.url
 http://wwwapps.ups.com/WebTracking/processInputRequest?TypeOfInquiryNumber=T&InquiryNumber1=1Z9999999999999999
 
 
 API Configuration
 =====================
 
-To enable package tracking, get an account for each of the services you wish
-to use, and then make a file at ~/.packagetrack that looks like::
+To enable package tracking (not just finding URLs or matching TNs to carriers),
+you will need to get API credentials for most of the carriers you wish to use.
+The default configuration method is to read the config values from
+~/.packagetrack, which looks like this:
 
     [UPS]
     license_number = XXXXXXXXXXXXXXXX
@@ -66,8 +68,14 @@ to use, and then make a file at ~/.packagetrack that looks like::
     userid = XXXXXXXXXXXX
     password = XXXXXXXXXXXX
 
+You can specify an alternate location for the config file like so:
 
-For USPS, the optional argument 'server' can be set to 'test' or 'production'.
+    >>> from packagetrack.configuration import DotFileConfig
+    >>> cfg = DotFileConfig('/path/to/file')
+    >>> packagetrack.auto_register_carriers(cfg)
+
+Alternatively, you can provide a different type of config like the
+DictConfig or making another type (like one that pulls values from a database).
 
 
 License

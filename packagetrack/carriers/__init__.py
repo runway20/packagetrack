@@ -2,61 +2,36 @@ import os
 from functools import wraps
 
 from ..configuration import NullConfig, ConfigKeyError
+from .errors import UnsupportedTrackingNumber
 
 __carriers = {}
 
-class TrackingFailure(Exception):
-    """Generic tracking failure, subclassed by more specific
-    exceptions.
-    """
-    pass
-
-class TrackingApiFailure(TrackingFailure):
-    """Raised in the event of a failure with the service's API. For
-    example, a SOAP fault or authentication failure. The request was
-    valid but the service API returned an error.
-    """
-    pass
-
-class TrackingNetworkFailure(TrackingFailure):
-    """Raised for network communication failure when talking to the
-    service API. For example, a network timeout or DNS resolution
-    failure.
-    """
-    pass
-
-class TrackingNumberFailure(TrackingFailure):
-    """Raised when the request to the service API was successful, but
-    the service didn't recognize the tracking number. For example the
-    tracking number wasn't in the service database, even though it looks like a
-    valid tracking number for the service.
-    """
-    pass
-
-class UnrecognizedTrackingNumber(TrackingFailure):
-    """Raised when a tracking number cannot be matched to a service.
-    """
-    pass
-
-class InvalidTrackingNumber(TrackingFailure):
-    """Raised when a service's track() method is called with a TN not for that
-    service
-    """
-    pass
-
 def register_carrier(carrier_iface, config):
+    """Register a carrier class, making it available to new Packages
+
+    The new carrier instance will replace an older one with the same string
+    representation
+    """
+
     carrier = carrier_iface(config)
     __carriers[str(carrier)] = carrier
     return carrier
 
 def identify_tracking_number(tracking_number):
+    """Return the carrier matching the givent tracking number, raises
+    UnsupportedTrackingNumber if no match is found
+    """
+
     for carrier in __carriers.values():
         if carrier.identify(tracking_number):
             return carrier
     else:
-        raise TrackingNumberFailure(tracking_number)
+        raise UnsupportedTrackingNumber(tracking_number)
 
 def auto_register_carriers(config):
+    """Look through the python files in this submodule, registering any classes
+    in them that are subclasses of BaseInterface
+    """
     carrier_modules = map(lambda m: __import__(m, fromlist='*'),
         [__name__ + '.' + f.rsplit('.', 1)[0] \
             for f in os.listdir(os.path.dirname(__file__)) \
@@ -70,16 +45,22 @@ def auto_register_carriers(config):
         register_carrier(carrier_iface, config)
 
 class BaseInterface(object):
+    """The basic interface for carriers. All registered carriers should inherit
+    from this class.
+    """
     DEFAULT_CFG = NullConfig()
 
     def __init__(self, config):
         self._config = config
 
     def __str__(self):
-        return self.LONG_NAME
+        return self.SHORT_NAME
 
-    @classmethod
-    def require_valid_tracking_number(cls, func):
+    @staticmethod
+    def require_valid_tracking_number(func):
+        """Intended for wrapping subclasses' track() methods, ensures track()
+        is called with a valid tracking number for that carrier.
+        """
         @wraps(func)
         def wrapper(self, tracking_number):
             if not self.identify(tracking_number):
@@ -98,6 +79,10 @@ class BaseInterface(object):
         return self._url_template.format(tracking_number=tracking_number)
 
     def _cfg_value(self, *keys):
+        """Return the config value from this carrier, looked up with {keys}.
+        If the value is not found, the DEFAULT_CFG is fallen back to, then
+        a ConfigKeyError is raised if still not found.
+        """
         try:
             value = self._config.get_value(self.CONFIG_NS, *keys)
         except ConfigKeyError as err:

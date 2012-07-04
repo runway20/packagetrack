@@ -2,9 +2,10 @@ import requests
 from datetime import datetime, date, time
 
 from ..configuration import DictConfig
-from ..carriers import BaseInterface, TrackingFailure
+from ..carriers import BaseInterface
 from ..xml_dict import dict_to_xml, xml_to_dict
 from ..data import TrackingInfo
+from .errors import *
 
 class UPSInterface(BaseInterface):
     SHORT_NAME = 'UPS'

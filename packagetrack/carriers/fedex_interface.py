@@ -5,11 +5,12 @@ from fedex.base_service import FedexError
 from fedex.services.track_service import FedexTrackRequest, FedexInvalidTrackingNumber
 
 from ..data import TrackingInfo
-from ..carriers import BaseInterface, TrackingApiFailure, TrackingNumberFailure
+from ..carriers import BaseInterface
+from .errors import *
 
 class FedexInterface(BaseInterface):
     SHORT_NAME = 'FedEx'
-    LONG_NAME = SHORT_NAME
+    LONG_NAME = 'Federal Express'
     CONFIG_NS = SHORT_NAME
     _url_template = 'http://www.fedex.com/Tracking?tracknumbers={tracking_number}'
 
@@ -204,4 +205,3 @@ class FedexInterface(BaseInterface):
 
         # compare with the checksum digit, which is the last digit
         return check == int(tracking_number[-1:])
-
