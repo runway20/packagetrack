@@ -90,7 +90,7 @@ class USPSInterface(BaseInterface):
 
         # USPS doesn't return this, so we work it out from the tracking number
         service_code = tracking_number[0:2]
-        service_description = self.service_types.get(service_code, 'USPS')
+        service_description = self._service_types.get(service_code, 'USPS')
 
         trackinfo = TrackingInfo(
             tracking_number = tracking_number,
