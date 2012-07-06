@@ -33,6 +33,8 @@ class USPSInterface(BaseInterface):
     }
     _url_template = 'http://trkcnfrm1.smi.usps.com/PTSInternetWeb/' \
         'InterLabelInquiry.do?origTrackNum={tracking_number}'
+    _request_xml = '<TrackFieldRequest USERID="{userid}">' \
+        '<TrackID ID="{tracking_number}"/></TrackFieldRequest>'
 
     def identify(self, tracking_number):
         return {
@@ -53,10 +55,9 @@ class USPSInterface(BaseInterface):
         return self._parse_response(resp, tracking_number)
 
     def _build_request(self, tracking_number):
-        config = packagetrack.config
-
-        return '<TrackFieldRequest USERID="%s"><TrackID ID="%s"/></TrackFieldRequest>' % (
-                self._cfg_value('userid'), tracking_number)
+        return self._request_xml.format(
+            userid=self._cfg_value('userid'),
+            tracking_number=tracking_number)
 
     def _parse_response(self, raw, tracking_number):
         rsp = xml_to_dict(raw)
@@ -116,7 +117,7 @@ class USPSInterface(BaseInterface):
         return trackinfo
 
     def _send_request(self, tracking_number):
-        url = self.api_url[self._cfg_value('server')] + \
+        url = self._api_urls[self._cfg_value('server')] + \
             self._build_request(tracking_number)
         return requests.get(url).text
 
