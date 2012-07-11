@@ -68,9 +68,12 @@ class USPSInterface(BaseInterface):
             raise TrackingApiFailure(error)
 
         # this is a result with an error, like "no such package"
-        if 'Error' in rsp['TrackResponse']['TrackInfo']:
-            error = rsp['TrackResponse']['TrackInfo']['Error']['Description']
-            raise TrackingNumberFailure(error)
+        try:
+            if 'Error' in rsp['TrackResponse']['TrackInfo']:
+                error = rsp['TrackResponse']['TrackInfo']['Error']['Description']
+                raise TrackingNumberFailure(error)
+        except KeyError:
+            raise TrackingApiFailure(rsp)
 
         # make sure the events list is a list
         try:
