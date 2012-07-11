@@ -79,13 +79,7 @@ class USPSInterface(BaseInterface):
         else:
             if type(events) != list:
                 events = [events]
-
         summary = rsp['TrackResponse']['TrackInfo']['TrackSummary']
-        last_update = self._getTrackingDate(summary)
-        last_location = self._getTrackingLocation(summary)
-
-        # status is the first event's status
-        status = summary['Event']
 
         # USPS doesn't return this, so we work it out from the tracking number
         service_code = tracking_number[0:2]
@@ -93,18 +87,17 @@ class USPSInterface(BaseInterface):
 
         trackinfo = TrackingInfo(
             tracking_number = tracking_number,
-            delivery_date   = last_update,
             service         = service_description,
         )
 
         # add the last event if delivered, USPS doesn't duplicate
         # the final event in the event log, but we want it there
-        if status == 'DELIVERED':
-            trackinfo.create_event(
-                location = last_location,
-                detail = status,
-                timestamp = last_update,
-            )
+        if summary['Event'] == 'DELIVERED':
+            trackinfo.delivery_date = last_update
+        trackinfo.create_event(
+            location=self._getTrackingLocation(summary),
+            timestamp=self._getTrackingDate(summary),
+            detail=summary['Event'])
 
         for e in events:
             trackinfo.create_event(
