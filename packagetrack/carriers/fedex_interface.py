@@ -45,10 +45,10 @@ class FedexInterface(BaseInterface):
         return {
             12: self._validate_express,
             15: self._validate_ground96,
-            20: lambda x: x.startswith('96') and self._validate_ground96(x),
-            22: lambda x: x.startswith('91') or (x.startswith('00') and \
-                self._validate_ssc18(x)),
-        }.get(len(tracking_number), lambda x: False)(tracking_number)
+            20: lambda tn: tn.startswith('96') and self._validate_ground96(tn),
+            22: lambda tn: tn.isdigit() or (tn.startswith('00') and \
+                self._validate_ssc18(tn)),
+        }.get(len(tracking_number), lambda tn: False)(tracking_number)
 
     def _parse_response(self, rsp, tracking_number):
         """Parse the track response and return a TrackingInfo object"""
