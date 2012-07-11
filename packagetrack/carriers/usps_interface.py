@@ -36,23 +36,19 @@ class USPSInterface(BaseInterface):
     _request_xml = '<TrackFieldRequest USERID="{userid}">' \
         '<TrackID ID="{tracking_number}"/></TrackFieldRequest>'
 
-    def identify(self, tracking_number):
-        return {
-            13: lambda x: \
-                x[0:2].isalpha() and x[2:9].isdigit() and x[11:13].isalpha(),
-            20: lambda x: \
-                x.isdigit() and x.startswith('0'),
-            22: lambda x: \
-                x.isdigit() and x.startswith('9') and not (x.startswith('96') or \
-                    x.startswith('91')),
-            30: lambda x:
-                x.isdigit(),
-        }.get(len(tracking_number), lambda x: False)(tracking_number)
-
     @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
+
+    def identify(self, tracking_number):
+        return {
+            13: lambda tn: \
+                tn[0:2].isalpha() and tn[2:9].isdigit() and tn[11:13].isalpha(),
+            20: lambda tn: tn.isdigit() and tn.startswith('0'),
+            22: lambda tn: tn.isdigit(),
+            30: lambda tn: tn.isdigit(),
+        }.get(len(tracking_number), lambda tn: False)(tracking_number)
 
     def _build_request(self, tracking_number):
         return self._request_xml.format(

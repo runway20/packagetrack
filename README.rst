@@ -68,6 +68,10 @@ The default configuration method is to read the config values from
     userid = XXXXXXXXXXXX
     password = XXXXXXXXXXXX
 
+    [CanadaPost]
+    username = XXXXXXXXXXXXXXXX
+    password = XXXXXXXXXXXXXXXXXXXXXX
+
 You can specify an alternate location for the config file like so::
 
     >>> from packagetrack.configuration import DotFileConfig

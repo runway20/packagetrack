@@ -6,11 +6,15 @@ class Package(object):
     """A package to be tracked."""
 
     _carrier = None
+    _repr_template = '<Package({p.tracking_number!r})>'
 
     def __init__(self, tracking_number, carrier=None):
         self.tracking_number = tracking_number
         if carrier is not None:
             self._carrier = carrier
+
+    def __repr__(self):
+        return self._repr_template.format(p=self)
 
     @property
     def carrier(self):
@@ -46,7 +50,7 @@ class TrackingInfo(dict):
     will be as well, unless it wasn't provided in which case it will be None
     """
 
-    _repr_template = '<TrackingInfo({i.tracking_number!r})>'
+    _repr_template = '<TrackingInfo(tracking_number={i.tracking_number!r}, timestamp={ts})>'
 
     def __init__(self, tracking_number, delivery_date=None, **kwargs):
         self.tracking_number = tracking_number
@@ -61,7 +65,7 @@ class TrackingInfo(dict):
         self[name] = val
 
     def __repr__(self):
-        return self._repr_template.format(i=self)
+        return self._repr_template.format(i=self, ts=self.last_update.isoformat())
 
     @property
     def location(self):

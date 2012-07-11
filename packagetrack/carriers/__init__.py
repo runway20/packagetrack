@@ -2,7 +2,7 @@ import os
 from functools import wraps
 
 from ..configuration import NullConfig, ConfigKeyError
-from .errors import UnsupportedTrackingNumber
+from .errors import TrackingFailure, UnsupportedTrackingNumber, InvalidTrackingNumber
 
 __carriers = {}
 
@@ -22,11 +22,29 @@ def identify_tracking_number(tracking_number):
     UnsupportedTrackingNumber if no match is found
     """
 
-    for carrier in __carriers.values():
-        if carrier.identify(tracking_number):
-            return carrier
+    try:
+        return identify_smart_post_number(tracking_number)
+    except (InvalidTrackingNumber, UnsupportedTrackingNumber):
+        for carrier in __carriers.values():
+            if carrier.identify(tracking_number):
+                return carrier
+        else:
+            raise UnsupportedTrackingNumber(tracking_number)
+
+def identify_smart_post_number(tracking_number):
+    if len(tracking_number) == 22:
+        for carrier in (carrier for carrier in __carriers.values() \
+                if carrier.identify(tracking_number)):
+            try:
+                carrier.track(tracking_number)
+            except TrackingFailure as err:
+                continue
+            else:
+                return carrier
+        else:
+            raise UnsupportedTrackingNumber(tracking_number)
     else:
-        raise UnsupportedTrackingNumber(tracking_number)
+        raise InvalidTrackingNumber(tracking_number)
 
 def auto_register_carriers(config):
     """Look through the python files in this submodule, registering any classes
@@ -62,7 +80,7 @@ class BaseInterface(object):
         is called with a valid tracking number for that carrier.
         """
         @wraps(func)
-        def wrapper(self, tracking_number):
+        def wrapper(self, tracking_number, skip_check=False):
             if not self.identify(tracking_number):
                 raise InvalidTrackingNumber(tracking_number)
             else:
