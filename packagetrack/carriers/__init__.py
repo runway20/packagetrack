@@ -80,17 +80,20 @@ class BaseInterface(object):
         is called with a valid tracking number for that carrier.
         """
         @wraps(func)
-        def wrapper(self, tracking_number, skip_check=False):
+        def wrapper(self, tracking_number, skip_check=False, *pargs, **kwargs):
             if not self.identify(tracking_number):
                 raise InvalidTrackingNumber(tracking_number)
             else:
-                return func(self, tracking_number)
+                return func(self, tracking_number, *pargs, **kwargs)
         return wrapper
 
     def identify(self, tracking_number):
         raise NotImplementedError()
 
     def track(self, tracking_number):
+        raise NotImplementedError()
+
+    def is_delivered(self, tracking_number, tracking_info=None):
         raise NotImplementedError()
 
     def url(self, tracking_number):

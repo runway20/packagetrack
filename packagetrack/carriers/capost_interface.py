@@ -36,7 +36,15 @@ class CanadaPostInterface(BaseInterface):
             raise TrackingApiFailure(e)
         info = self._parse_response(summary, detail)
         info.tracking_number = tracking_number
+        info.is_delivered = self.is_delivered(None, info)
+        if info.is_delivered:
+            info.delivery_date = info.last_update
         return info
+
+    def is_delivered(self, tracking_number, tracking_info=None):
+        if tracking_info is None:
+            tracking_number = self.track(tracking_number)
+        return tracking_info.status.lower().endswith('delivered')
 
     def _get_client(self):
         if self._client is None:
@@ -52,9 +60,9 @@ class CanadaPostInterface(BaseInterface):
         return [k for k in dir(reply) if not k.startswith('_')]
 
     def _parse_response(self, summary_response, detail_response):
-        if 'messages' in self.get_keys(summary_response):
+        if 'messages' in self._get_keys(summary_response):
             raise TrackingApiFailure(summary_response['messages'])
-        elif 'messages' in self.get_keys(detail_response):
+        elif 'messages' in self._get_keys(detail_response):
             raise TrackingApiFailure(detail_response['messages'])
         summary = summary_response['tracking-summary']['pin-summary'][0]
         details = detail_response['tracking-detail']
@@ -65,8 +73,7 @@ class CanadaPostInterface(BaseInterface):
         info = TrackingInfo(
             tracking_number=None,
             delivery_date=delivery_date,
-            status=summary['event-type'],
-            service=service
+            service=service,
         )
         for event in details['significant-events']['occurrence'][::-1]:
             date = datetime.datetime.strptime(event['event-date'], '%Y-%m-%d').date()
@@ -76,5 +83,3 @@ class CanadaPostInterface(BaseInterface):
                 detail=event['event-description'],
                 location=','.join([event['event-site'], event['event-province']]))
         return info
-
-

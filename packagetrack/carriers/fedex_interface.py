@@ -50,6 +50,11 @@ class FedexInterface(BaseInterface):
                 self._validate_ssc18(tn)),
         }.get(len(tracking_number), lambda tn: False)(tracking_number)
 
+    def is_delivered(self, tracking_number, tracking_info=None):
+        if tracking_info is None:
+            tracking_number = self.track(tracking_number)
+        return tracking_info.status.lower() == 'delivered'
+
     def _parse_response(self, rsp, tracking_number):
         """Parse the track response and return a TrackingInfo object"""
 
@@ -99,6 +104,10 @@ class FedexInterface(BaseInterface):
                 timestamp= e.Timestamp,
                 detail   = e.EventDescription,
             )
+
+        trackinfo.is_delivered = self.is_delivered(None, trackinfo)
+        if trackinfo.is_delivered:
+            trackinfo.delivery_date = trackinfo.last_update
 
         return trackinfo
 

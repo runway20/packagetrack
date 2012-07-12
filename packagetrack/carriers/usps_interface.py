@@ -1,4 +1,4 @@
-from datetime import datetime, time
+import datetime
 import requests
 
 from ..configuration import DictConfig
@@ -24,12 +24,12 @@ class USPSInterface(BaseInterface):
             'API=TrackV2&XML=',
     }
     _service_types = {
-        'EA': 'express mail',
-        'EC': 'express mail international',
-        'CP': 'priority mail international',
-        'RA': 'registered mail',
-        'RF': 'registered foreign',
-#        'EJ': 'something?',
+        'EA': 'Express Mail',
+        'EC': 'Express Mail International',
+        'CP': 'Priority Mail International',
+        'RA': 'Registered Mail Domestic',
+        'RF': 'Registered Mail Foreign',
+        # 'EJ': 'something?',
     }
     _url_template = 'http://trkcnfrm1.smi.usps.com/PTSInternetWeb/' \
         'InterLabelInquiry.do?origTrackNum={tracking_number}'
@@ -49,6 +49,11 @@ class USPSInterface(BaseInterface):
             22: lambda tn: tn.isdigit(),
             30: lambda tn: tn.isdigit(),
         }.get(len(tracking_number), lambda tn: False)(tracking_number)
+
+    def is_delivered(self, tracking_number, tracking_info=None):
+        if tracking_info is None:
+            tracking_number = self.track(tracking_number)
+        return tracking_info.status.lower() == 'delivered'
 
     def _build_request(self, tracking_number):
         return self._request_xml.format(
@@ -82,18 +87,15 @@ class USPSInterface(BaseInterface):
         summary = rsp['TrackResponse']['TrackInfo']['TrackSummary']
 
         # USPS doesn't return this, so we work it out from the tracking number
-        service_code = tracking_number[0:2]
-        service_description = self._service_types.get(service_code, 'USPS')
+        service_description = self._service_types.get(tracking_number[0:2], 'USPS')
 
         trackinfo = TrackingInfo(
             tracking_number = tracking_number,
             service         = service_description,
         )
 
-        # add the last event if delivered, USPS doesn't duplicate
-        # the final event in the event log, but we want it there
-        if summary['Event'] == 'DELIVERED':
-            trackinfo.delivery_date = last_update
+        # add the summary event, USPS doesn't duplicate it in the event log,
+        # but we want it there
         trackinfo.create_event(
             location=self._getTrackingLocation(summary),
             timestamp=self._getTrackingDate(summary),
@@ -106,6 +108,10 @@ class USPSInterface(BaseInterface):
                 detail   = e['Event'],
             )
 
+        trackinfo.is_delivered = self.is_delivered(None, trackinfo)
+        if trackinfo.is_delivered:
+            trackinfo.delivery_date = trackinfo.last_update
+
         return trackinfo
 
     def _send_request(self, tracking_number):
@@ -116,21 +122,15 @@ class USPSInterface(BaseInterface):
     def _getTrackingDate(self, node):
         """Returns a datetime object for the given node's
         <EventTime> and <EventDate> elements"""
-        date = datetime.strptime(node['EventDate'], '%B %d, %Y').date()
-        if node['EventTime']:
-            time_ = datetime.strptime(node['EventTime'], '%I:%M %p').time()
-        else:
-            time_ = time(0,0,0)
-        return datetime.combine(date, time_)
-
+        date = datetime.datetime.strptime(node['EventDate'], '%B %d, %Y').date()
+        time = datetime.datetime.strptime(node['EventTime'], '%I:%M %p').time() \
+            if node['EventTime'] else datetime.time(0, 0, 0)
+        return datetime.datetime.combine(date, time)
 
     def _getTrackingLocation(self, node):
         """Returns a location given a node that has
             EventCity, EventState, EventCountry elements"""
-
-        return ','.join((
-                node['EventCity'],
-                node['EventState'],
-                node['EventCountry'] or 'US'
-            ))
-
+        return ','.join(
+            node[key] for key in ('Event'+i for i in ['City', 'State', 'Country']) \
+                if node[key]) or \
+            'USA'

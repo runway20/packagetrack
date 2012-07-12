@@ -28,6 +28,11 @@ class UPSInterface(BaseInterface):
         resp = self._send_request(tracking_number)
         return self._parse_response(resp, tracking_number)
 
+    def is_delivered(self, tracking_number, tracking_info=None):
+        if tracking_info is None:
+            tracking_number = self.track(tracking_number)
+        return tracking_info.status.lower() == 'delivered'
+
     def _check_tracking_code(self, tracking_code):
         digits = map(lambda d: int(d) if d.isdigit() else ((ord(d) - 63) % 10),
             tracking_code[:-1].upper())
@@ -165,5 +170,9 @@ class UPSInterface(BaseInterface):
                 detail = e['Status']['StatusType']['Description'],
                 timestamp = timestamp,
             )
+
+        trackinfo.is_delivered = self.is_delivered(None, trackinfo)
+        if trackinfo.is_delivered:
+            trackinfo.delivery_date = trackinfo.last_update
 
         return trackinfo

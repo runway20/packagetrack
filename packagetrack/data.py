@@ -6,7 +6,7 @@ class Package(object):
     """A package to be tracked."""
 
     _carrier = None
-    _repr_template = '<Package({p.tracking_number!r})>'
+    _repr_template = '<Package(carrier={p.carrier!s}, tracking_number={p.tracking_number!r})>'
 
     def __init__(self, tracking_number, carrier=None):
         self.tracking_number = tracking_number
@@ -22,8 +22,7 @@ class Package(object):
         """
 
         if self._carrier is None:
-            self._carrier = identify_tracking_number(
-                self.tracking_number)
+            self._carrier = identify_tracking_number(self.tracking_number)
         return self._carrier
 
     def track(self):
@@ -52,9 +51,10 @@ class TrackingInfo(dict):
 
     _repr_template = '<TrackingInfo(tracking_number={i.tracking_number!r}, timestamp={ts})>'
 
-    def __init__(self, tracking_number, delivery_date=None, **kwargs):
+    def __init__(self, tracking_number, delivery_date=None, is_delivered=False, **kwargs):
         self.tracking_number = tracking_number
         self.delivery_date = delivery_date
+        self.is_delivered = is_delivered
         self.events = []
         self.update(kwargs)
 

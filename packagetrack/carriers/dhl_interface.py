@@ -63,6 +63,11 @@ class DHLInterface(BaseInterface):
             server=self._servers[self._cfg_value('server')])
         return self._parse_response(requests.post(url, req).text)
 
+    def is_delivered(self, tracking_number, tracking_info=None):
+        if tracking_info is None:
+            tracking_number = self.track(tracking_number)
+        return tracking_info.status.lower().endswith('delivered')
+
     def _parse_response(self, raw_api_response):
         try:
             resp = xml_to_dict(raw_api_response)['req:TrackingResponse']['AWBInfo']
@@ -74,15 +79,14 @@ class DHLInterface(BaseInterface):
             except KeyError:
                 msg = resp['Status']['ActionStatus']
             raise TrackingApiFailure(msg)
-        delivery_date = datetime.datetime.strptime(
-            resp['ShipmentInfo']['ShipmentDate'], self._time_format) + \
-            datetime.timedelta(days=5)
         info = TrackingInfo(
             tracking_number=resp['AWBNumber'],
-            delivery_date=delivery_date,
         )
         info.events = info.sort_events(self._parse_events(
             resp['ShipmentInfo']['ShipmentEvent']))
+        info.is_delivered = self.is_delivered(None, info)
+        if info.is_delivered:
+            info.delivery_date = info.last_update
         return info
 
     def _parse_events(self, events):
