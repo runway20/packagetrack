@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 
 from ..configuration import DictConfig
 from ..carriers import BaseInterface
@@ -130,10 +130,10 @@ class UPSInterface(BaseInterface):
             delivery_date = last_update
         elif 'RescheduledDeliveryDate' in package:
             delivery_date = datetime.strptime(
-                package['RescheduledDeliveryDate'], "%Y%m%d")
+                package['RescheduledDeliveryDate'], "%Y%m%d") + timedelta(hours=18)
         elif 'ScheduledDeliveryDate' in root['Shipment']:
             delivery_date = datetime.strptime(
-                root['Shipment']['ScheduledDeliveryDate'], "%Y%m%d")
+                root['Shipment']['ScheduledDeliveryDate'], "%Y%m%d") + timedelta(hours=18)
         else:
             delivery_date = None
 
