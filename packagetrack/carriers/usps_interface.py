@@ -52,7 +52,7 @@ class USPSInterface(BaseInterface):
 
     def is_delivered(self, tracking_number, tracking_info=None):
         if tracking_info is None:
-            tracking_number = self.track(tracking_number)
+            tracking_info = self.track(tracking_number)
         return tracking_info.status.lower() == 'delivered'
 
     def _build_request(self, tracking_number):

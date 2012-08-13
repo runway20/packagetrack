@@ -65,7 +65,7 @@ class DHLInterface(BaseInterface):
 
     def is_delivered(self, tracking_number, tracking_info=None):
         if tracking_info is None:
-            tracking_number = self.track(tracking_number)
+            tracking_info = self.track(tracking_number)
         return tracking_info.status.lower().endswith('delivered')
 
     def _parse_response(self, raw_api_response):
