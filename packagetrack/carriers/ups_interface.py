@@ -18,10 +18,11 @@ class UPSInterface(BaseInterface):
         'TypeOfInquiryNumber=T&InquiryNumber1={tracking_number}'
 
     def identify(self, tracking_number):
-        return tracking_number.startswith('1Z') and \
+        return (tracking_number.startswith('1Z') and \
             tracking_number[-1].isdigit() and \
             tracking_number.isalnum() and \
-            self._check_tracking_code(tracking_number[2:])
+            self._check_tracking_code(tracking_number[2:])) or \
+            self._is_mi_tracking_number(tracking_number)
 
     @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
@@ -32,6 +33,9 @@ class UPSInterface(BaseInterface):
         if tracking_info is None:
             tracking_info = self.track(tracking_number)
         return tracking_info.status.lower() == 'delivered'
+
+    def _is_mi_tracking_number(self, tracking_number):
+        return len(tracking_number) == 18 and tracking_number.isdigit()
 
     def _check_tracking_code(self, tracking_code):
         digits = map(lambda d: int(d) if d.isdigit() else ((ord(d) - 63) % 10),
@@ -62,6 +66,8 @@ class UPSInterface(BaseInterface):
                 'TrackingNumber': tracking_number,
             }
         }
+        if self._is_mi_tracking_number(tracking_number):
+            data['TrackRequest']['TrackingOption'] = '03'
         return dict_to_xml(data)
 
     def _build_request(self, tracking_number):
@@ -103,27 +109,6 @@ class UPSInterface(BaseInterface):
         last_update_time = datetime.strptime(activity['Time'], "%H%M%S").time()
         last_update = datetime.combine(last_update_date, last_update_time)
 
-        # 031 = BASIC service, delivered to local P.O., so we use the
-        # ShipTo address to get the city, state, country
-        # this may never be considered D=Delivered, best we can do
-        # is just report that the local P.O. got it.
-        #
-        # note this also has no SDD, so we just use the last update
-        if service_code == '031':
-            loc = root['Shipment']['ShipTo']['Address']
-        else:
-            loc = activity['ActivityLocation']['Address']
-        if status_code == 'M':
-            last_location = 'N/A'
-        else:
-            last_location = []
-            for key in ['City', 'StateProvinceCode', 'CountryCode']:
-                try:
-                    last_location.append(loc[key])
-                except KeyError:
-                    continue
-            last_location = ','.join(last_location) if last_location else 'UNKNOWN'
-
         # Delivery date is the last_update if delivered, otherwise
         # the estimated delivery date
         if service_code == '031' or status_code == 'D':
@@ -153,9 +138,12 @@ class UPSInterface(BaseInterface):
         # add a single event, UPS doesn't seem to support multiple?
 
         for e in package['Activity']:
-            loc = e['ActivityLocation']['Address']
+            if 'Address' in e['ActivityLocation']:
+                loc = e['ActivityLocation']['Address']
+            else:
+                loc = e['ActivityLocation']['TransportFacility']
             location = []
-            for key in ['City', 'StateProvinceCode', 'CountryCode']:
+            for key in ['Code', 'City', 'StateProvinceCode', 'CountryCode']:
                 try:
                     location.append(loc[key])
                 except KeyError:
