@@ -82,7 +82,7 @@ class FedexInterface(BaseInterface):
         else:
             delivery_detail = None
             try:
-                delivery_date = rsp.EstimatedDeliveryTimestamp
+                delivery_date = datetime.combine(rsp.EstimatedDeliveryTimestamp, time(18))
             except AttributeError:
                 delivery_date = None
             last_update = rsp.Events[0].Timestamp
