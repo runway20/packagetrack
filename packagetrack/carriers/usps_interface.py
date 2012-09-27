@@ -62,7 +62,7 @@ class USPSInterface(BaseInterface):
 
     def _parse_response(self, raw, tracking_number):
         rsp = xml_to_dict(raw)
-
+        print rsp
         # this is a system error
         if 'Error' in rsp:
             error = rsp['Error']['Description']
@@ -122,7 +122,10 @@ class USPSInterface(BaseInterface):
     def _getTrackingDate(self, node):
         """Returns a datetime object for the given node's
         <EventTime> and <EventDate> elements"""
-        date = datetime.datetime.strptime(node['EventDate'], '%B %d, %Y').date()
+        try:
+            date = datetime.datetime.strptime(node['EventDate'], '%B %d, %Y').date()
+        except ValueError:
+            date = datetime.datetime.now() - datetime.timedelta(7)
         time = datetime.datetime.strptime(node['EventTime'], '%I:%M %p').time() \
             if node['EventTime'] else datetime.time(0, 0, 0)
         return datetime.datetime.combine(date, time)
