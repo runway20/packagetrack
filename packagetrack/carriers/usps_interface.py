@@ -62,7 +62,6 @@ class USPSInterface(BaseInterface):
 
     def _parse_response(self, raw, tracking_number):
         rsp = xml_to_dict(raw)
-        print rsp
         # this is a system error
         if 'Error' in rsp:
             error = rsp['Error']['Description']
