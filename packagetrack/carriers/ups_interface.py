@@ -138,7 +138,6 @@ class UPSInterface(BaseInterface):
         # add a single event, UPS doesn't seem to support multiple?
 
         for e in package['Activity']:
-            print e
             location = self._get_event_location(e['ActivityLocation'])
             edate = datetime.strptime(e['Date'], "%Y%m%d").date()
             etime = datetime.strptime(e['Time'], "%H%M%S").time()
