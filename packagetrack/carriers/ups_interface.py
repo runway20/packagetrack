@@ -138,18 +138,8 @@ class UPSInterface(BaseInterface):
         # add a single event, UPS doesn't seem to support multiple?
 
         for e in package['Activity']:
-            if 'Address' in e['ActivityLocation']:
-                loc = e['ActivityLocation']['Address']
-            else:
-                loc = e['ActivityLocation']['TransportFacility']
-            location = []
-            for key in ['Code', 'City', 'StateProvinceCode', 'CountryCode']:
-                try:
-                    location.append(loc[key])
-                except KeyError:
-                    continue
-            location = ','.join(location) if location else 'UNKNOWN'
-
+            print e
+            location = self._get_event_location(e['ActivityLocation'])
             edate = datetime.strptime(e['Date'], "%Y%m%d").date()
             etime = datetime.strptime(e['Time'], "%H%M%S").time()
             timestamp = datetime.combine(edate, etime)
@@ -164,3 +154,17 @@ class UPSInterface(BaseInterface):
             trackinfo.delivery_date = trackinfo.last_update
 
         return trackinfo
+
+    def _get_event_location(self, location_tag):
+        if type(location_tag) == str:
+            return location_tag or 'UNKNOWN'
+        else:
+            if 'Address' in location_tag:
+                sub_loc = location_tag['Address']
+            else:
+                sub_loc = location_tag['TransportFacility']
+            keys = ['Code', 'City', 'StateProvinceCode', 'CountryCode']
+            location = ','.join(sub_loc[key] for key in keys if key in sub_loc)
+            if not location:
+                location = 'UNKNOWN'
+            return location
