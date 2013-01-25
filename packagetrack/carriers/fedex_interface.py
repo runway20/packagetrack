@@ -43,7 +43,7 @@ class FedexInterface(BaseInterface):
         """Validate the tracking number"""
 
         return {
-            12: self._validate_express,
+            12: lambda tn: self._validate_express(tn) or True,
             15: self._validate_ground96,
             20: lambda tn: tn.startswith('96') and self._validate_ground96(tn),
             22: lambda tn: tn.isdigit() or (tn.startswith('00') and \
