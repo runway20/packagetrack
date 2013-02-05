@@ -21,6 +21,7 @@ Will be transformed to and from this dict:
 """
 
 from xml.dom.minidom import getDOMImplementation, parseString
+from xml.parsers.expat import ExpatError
 
 
 def dict_to_doc(d, attrs=None):
@@ -50,7 +51,11 @@ def dict_to_xml(d, attrs=None):
 
 def xml_to_dict(s):
     """Convert XML data to a Python dict"""
-    return nodeToDict(parseString(s))
+    try:
+        data = nodeToDict(parseString(s))
+    except ExpatError as err:
+        raise ValueError(err)
+    return data
 
 class NotTextNodeError: pass
 

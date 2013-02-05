@@ -1,6 +1,9 @@
 from operator import attrgetter
+from requests import ConnectionError
+from urllib2 import URLError
 
 from .carriers import identify_tracking_number
+from .carriers.errors import TrackingNetworkFailure
 
 class Package(object):
     """A package to be tracked."""
@@ -29,7 +32,10 @@ class Package(object):
         """Get the tracking info for this package, returns a TrackingInfo object
         """
 
-        return self.carrier.track(self.tracking_number)
+        try:
+            return self.carrier.track(self.tracking_number)
+        except (ConnectionError, URLError) as err:
+            raise TrackingNetworkFailure(err)
 
     @property
     def url(self):

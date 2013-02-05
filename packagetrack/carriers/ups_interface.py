@@ -78,7 +78,10 @@ class UPSInterface(BaseInterface):
         return requests.post(self._api_url, self._build_request(tracking_number)).text
 
     def _parse_response(self, raw, tracking_number):
-        root = xml_to_dict(raw)['TrackResponse']
+        try:
+            root = xml_to_dict(raw)['TrackResponse']
+        except ValueError as err:
+            raise TrackingApiFailure(err)
 
         response = root['Response']
         status_code = response['ResponseStatusCode']
