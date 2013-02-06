@@ -27,7 +27,7 @@ class FedexInterface(BaseInterface):
             track.send_request()
         except FedexInvalidTrackingNumber as err:
             raise TrackingNumberFailure(err)
-        except FedexError as err:
+        except (FedexError, Exception) as err:
             raise TrackingApiFailure(err)
 
         # TODO: I haven't actually seen an unsuccessful query yet
