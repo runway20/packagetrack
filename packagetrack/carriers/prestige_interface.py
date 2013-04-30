@@ -14,6 +14,8 @@ class PrestigeInterface(BaseInterface):
     DEFAULT_CFG = DictConfig({CONFIG_NS:{}})
 
     _API_URL = 'http://www.prestigedelivery.com/TrackingHandler.ashx'
+    
+    _url_template = 'http://www.prestigedelivery.com/trackpackage.aspx?{tracking_number}'
 
     @BaseInterface.require_valid_tracking_number
     def track(self, tracking_number):
