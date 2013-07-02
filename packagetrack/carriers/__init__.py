@@ -50,17 +50,18 @@ def auto_register_carriers(config):
     """Look through the python files in this submodule, registering any classes
     in them that are subclasses of BaseInterface
     """
-    carrier_modules = map(lambda m: __import__(m, fromlist='*'),
-        [__name__ + '.' + f.rsplit('.', 1)[0] \
-            for f in os.listdir(os.path.dirname(__file__)) \
-                if f.endswith('.py') and not f.startswith('_')])
-    carrier_ifaces = [getattr(m, c) for m in carrier_modules \
-        for c in dir(m) \
-            if c.endswith('Interface') and \
-                issubclass(getattr(m, c), BaseInterface) and \
-                getattr(m, c) is not BaseInterface]
-    for carrier_iface in carrier_ifaces:
-        register_carrier(carrier_iface, config)
+    pass
+    # carrier_modules = map(lambda m: __import__(m, fromlist='*'),
+    #     [__name__ + '.' + f.rsplit('.', 1)[0] \
+    #         for f in os.listdir(os.path.dirname(__file__)) \
+    #             if f.endswith('.py') and not f.startswith('_')])
+    # carrier_ifaces = [getattr(m, c) for m in carrier_modules \
+    #     for c in dir(m) \
+    #         if c.endswith('Interface') and \
+    #             issubclass(getattr(m, c), BaseInterface) and \
+    #             getattr(m, c) is not BaseInterface]
+    # for carrier_iface in carrier_ifaces:
+    #     register_carrier(carrier_iface, config)
 
 class BaseInterface(object):
     """The basic interface for carriers. All registered carriers should inherit
