@@ -22,9 +22,9 @@ class PrestigeInterface(BaseInterface):
         return self._parse_response(self._send_request(tracking_number))
 
     def identify(self, tracking_number):
-        return (tracking_number.startswith('PS') or \
-            tracking_number.startswith('PL')) and \
-            len(tracking_number) == 10 and \
+        return len(tracking_number) == 10 and \
+            tracking_number[0] == 'P' and \
+            tracking_number[1].isalpha() and \
             tracking_number[2:].isdigit()
 
     def is_delivered(self, tracking_number, tracking_info=None):
